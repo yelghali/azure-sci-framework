@@ -2,8 +2,7 @@ from kubernetes import client, config
 import datetime
 import json
 
-# Load the Kubernetes configuration from the default location
-config.load_kube_config()
+
 
 
 #########################
@@ -49,6 +48,8 @@ class CarbonQLSCIModel:
 
 class NodeResourceProvider(CarbonQLResourceProvider):
     def __init__(self, resource_label_selectors):
+        # Load the Kubernetes configuration from the default location
+        config.load_kube_config()
         super().__init__(resource_label_selectors)
 
     def get_metadata(self, resource_label_selectors="all"):
