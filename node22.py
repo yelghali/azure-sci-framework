@@ -22,14 +22,14 @@ class CarbonQLResourceProvider:
 
 
 class CarbonQLSCIModel:
-    def __init__(self, metadata_provider):
-        self.metadata_provider = metadata_provider
+    def __init__(self):
+        pass
 
-    def calculate_cpu_energy(self, usage_percentage, tdp):
+    def calculate_cpu_energy(self, resource_info):
         # Your implementation of the calculate_cpu_energy function here
         pass
 
-    def calculate_memory_energy(self, usage_percentage, memory):
+    def calculate_memory_energy(self, resource_info):
         # Your implementation of the calculate_memory_energy function here
         pass
 
@@ -37,18 +37,12 @@ class CarbonQLSCIModel:
         # Your implementation of the calculate_total_energy function here
         pass
 
-    def calculate_embodied_emissions(self, sku):
+    def calculate_embodied_emissions(self, resource_info):
         # Your implementation of the calculate_embodied_emissions function here
         pass
 
     def calculate_sci(self, total_energy, embodied_emissions):
         # Your implementation of the calculate_sci function here
-        pass
-
-    def export_sci_metrics(self):
-        metadata = self.metadata_provider.get_metadata()
-        usage_telemetry = self.metadata_provider.get_usage_telemetry()
-        # Your implementation of the export_sci_metrics function here
         pass
 
     ######################
@@ -151,10 +145,12 @@ class NodeResourceProvider(CarbonQLResourceProvider):
 
 
 class NodeSCIModel(CarbonQLSCIModel):
-    def __init__(self, metadata_provider):
-        super().__init__(metadata_provider)
+    def __init__(self):
+        super().__init__()
 
-    def calculate_cpu_energy(self,cpu_usage_percentage, tdp):
+    def calculate_cpu_energy(self,resource_info):
+        tdp = float(resource_info.get('cpu').rstrip('n'))
+        cpu_usage_percentage = float(resource_info['cpu_percentage'])
         # Calculate the TDP coefficient based on the CPU utilization percentage
         if cpu_usage_percentage == 0:
             tdp_coefficient = 0.12
@@ -168,7 +164,9 @@ class NodeSCIModel(CarbonQLSCIModel):
 
         return energy_consumption
 
-    def calculate_memory_energy(self,memory_usage_percentage):
+    def calculate_memory_energy(self,resource_info):
+        memory_usage_percentage = float(resource_info['memory_percentage'])
+
         # Memory energy consumption in Joules per GB
         energy_per_gb = 0.0000001
 
@@ -183,31 +181,8 @@ class NodeSCIModel(CarbonQLSCIModel):
 
         return energy_consumption
 
-    def calculate_total_energy2(self):
-        # Get the usage telemetry for all nodes
-        node_usage_telemetry = self.metadata_provider.get_usage_telemetry()
 
-        # Calculate the CPU energy consumption for each node
-        for node_name, node_info in node_usage_telemetry.items():
-            tdp = node_info.get('cpu').rstrip('n')
-            cpu_energy = self.calculate_cpu_energy(node_info['cpu_percentage'], float(tdp))
-            node_info['cpu_energy'] = cpu_energy
-
-        # Calculate the memory energy consumption for each node
-            memory_energy = self.calculate_memory_energy(node_info['memory_percentage'])
-            node_info['memory_energy'] = memory_energy
-
-        # Generate a dictionary containing the node name, node CPU energy, and node memory energy
-        node_energy = {}
-        node_energy[node_name] = {
-                'cpu_energy': node_info['cpu_energy'],
-                'memory_energy': node_info['memory_energy'],
-                'total_energy': node_info['cpu_energy'] + node_info['memory_energy']
-            }
-
-        return node_energy
-
-    def calculate_embodied_emissions_m(self, node_sku):
+    def calculate_embodied_emissions(self, resource_info):
         # TE: Embodied carbon estimates for the servers from the Cloud Carbon Footprint Coefficient Data Set
         te = 0.5  # kgCO2e/hour
 
@@ -251,7 +226,7 @@ class CarbonQLComponent:
     def __init__(self, resource_provider_class, sci_model_class, resource_label_selectors):
         self.resource_label_selectors = resource_label_selectors
         self.resource_provider = resource_provider_class(resource_label_selectors)
-        self.sci_model = sci_model_class(self.resource_provider)
+        self.sci_model = sci_model_class()
 
     def get_resource_metadata(self):
         return self.resource_provider.get_metadata()
@@ -259,42 +234,61 @@ class CarbonQLComponent:
     def get_resource_observations(self):
         return self.resource_provider.get_usage_telemetry()
     
+    def get_region_carbon_intensity(self):
+        # return self.sci_model.get_region_carbon_intensity()
+        return 100
+    
     def get_sci_model(self):
         return self.sci_model
     
-    def calculate_total_energy(self):
+    def get_total_energy(self):
         # Get the usage telemetry for all nodes
-        node_usage_telemetry = self.resource_provider.get_usage_telemetry()
+        resource_usage_telemetry = self.resource_provider.get_usage_telemetry()
 
         # Calculate the CPU energy consumption for each node
-        for node_name, node_info in node_usage_telemetry.items():
-            tdp = node_info.get('cpu').rstrip('n')
-            cpu_energy = self.sci_model.calculate_cpu_energy(node_info['cpu_percentage'], float(tdp))
-            node_info['cpu_energy'] = cpu_energy
+        for resource_name, resource_info in resource_usage_telemetry.items():
+            cpu_energy = self.sci_model.calculate_cpu_energy(resource_info)
+            resource_info['cpu_energy'] = cpu_energy
 
         # Calculate the memory energy consumption for each node
-            memory_energy = self.sci_model.calculate_memory_energy(node_info['memory_percentage'])
-            node_info['memory_energy'] = memory_energy
+            memory_energy = self.sci_model.calculate_memory_energy(resource_info)
+            resource_info['memory_energy'] = memory_energy
 
         # Generate a dictionary containing the node name, node CPU energy, and node memory energy
-        node_energy = {}
-        node_energy[node_name] = {
-                'cpu_energy': node_info['cpu_energy'],
-                'memory_energy': node_info['memory_energy'],
-                'total_energy': node_info['cpu_energy'] + node_info['memory_energy']
+        resource_energy = {}
+        resource_energy[resource_name] = {
+                'cpu_energy': resource_info['cpu_energy'],
+                'memory_energy': resource_info['memory_energy'],
+                'total_energy': resource_info['cpu_energy'] + resource_info['memory_energy']
             }
 
-        return node_energy
+        return resource_energy
 
+    def get_embodied_emissions(self):
+        # Get the usage telemetry for all nodes
+        resource_usage_telemetry = self.resource_provider.get_usage_telemetry()
+
+        # Calculate the CPU energy consumption for each node
+        for resource_name, resource_info in resource_usage_telemetry.items():
+            embodied_emissions = self.sci_model.calculate_embodied_emissions(resource_info)
+            resource_info['embodied_emissions'] = embodied_emissions
+
+ 
+        # Generate a dictionary containing the node name, node CPU energy, and node memory energy
+        resource_em = {}
+        resource_em[resource_name] = {
+                'embodied_emissions': resource_info['embodied_emissions']
+            }
+
+        return resource_em
+    
     def export_sci_metrics(self):
         metadata = self.resource_provider.get_metadata()
         usage_telemetry = self.resource_provider.get_usage_telemetry()
         print(usage_telemetry)
         print("######\n")
 
-        node_energy = self.calculate_total_energy()
-        print(node_energy)
-        print("######\n")
+
 
         sci_metrics = self.sci_model.calculate_sci_metrics()
         print(sci_metrics)
@@ -303,8 +297,26 @@ class CarbonQLComponent:
         return None
        
     def get_sci_metrics(self):
-        return self.export_sci_metrics()
-    
+        node_energy = self.get_total_energy()
+        node_embodied_emissions = self.get_embodied_emissions()
+        region_carbon_intensity = self.get_region_carbon_intensity()
+
+        # Merge the dictionaries by node name
+        nodes = {}
+        for d in [node_energy, node_embodied_emissions]:
+            for k, v in d.items():
+                nodes.setdefault(k, {}).update(v)
+
+        # Calculate the SCI metrics for each node
+        for node_name, node_data in nodes.items():
+            E = node_data["total_energy"]
+            I = region_carbon_intensity
+            M = node_data["embodied_emissions"]
+            SCI = (E * I) + M
+            nodes[node_name]["SCI"] = SCI
+
+        return nodes
+
     def get_ghg_metrics(self):
         pass
 
