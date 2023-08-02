@@ -1,6 +1,7 @@
 
 class CarbonQLComponent:
-    def __init__(self, resource_provider_class, sci_model_class, resource_label_selectors):
+    def __init__(self, carbon_intensity_provider, resource_provider_class, sci_model_class, resource_label_selectors):
+        self.carbon_intensity_provider = carbon_intensity_provider
         self.resource_label_selectors = resource_label_selectors
         self.resource_provider = resource_provider_class(resource_label_selectors)
         self.sci_model = sci_model_class()
@@ -12,8 +13,7 @@ class CarbonQLComponent:
         return self.resource_provider.get_usage_telemetry()
     
     def get_region_carbon_intensity(self):
-        # return self.sci_model.get_region_carbon_intensity()
-        return 100
+        return self.carbon_intensity_provider.get_carbon_intensity()
     
     def get_sci_model(self):
         return self.sci_model

@@ -22,10 +22,6 @@ class CarbonQLSCIModel:
         # Your implementation of the calculate_embodied_emissions function here
         pass
 
-    def calculate_sci(self, total_energy, embodied_emissions):
-        # Your implementation of the calculate_sci function here
-        pass
-
 
 
 
@@ -87,7 +83,3 @@ class NodeSCIModel(CarbonQLSCIModel):
         m = te * (tr / el) * (rr / total_vcpus)
 
         return m
-
-    def calculate_sci_metrics(self):
-        sci_metrics = {}
-        return sci_metrics
