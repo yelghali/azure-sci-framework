@@ -22,6 +22,7 @@ class CarbonQLComponent:
         # Get the usage telemetry for all nodes
         resource_usage_telemetry = self.resource_provider.get_usage_telemetry()
 
+        resource_energy = {}
         # Calculate the CPU energy consumption for each node
         for resource_name, resource_info in resource_usage_telemetry.items():
             cpu_energy = self.sci_model.calculate_cpu_energy(resource_info)
@@ -31,13 +32,12 @@ class CarbonQLComponent:
             memory_energy = self.sci_model.calculate_memory_energy(resource_info)
             resource_info['memory_energy'] = memory_energy
 
-        # Generate a dictionary containing the node name, node CPU energy, and node memory energy
-        resource_energy = {}
-        resource_energy[resource_name] = {
-                'cpu_energy': resource_info['cpu_energy'],
-                'memory_energy': resource_info['memory_energy'],
-                'total_energy': resource_info['cpu_energy'] + resource_info['memory_energy']
-            }
+            # Generate a dictionary containing the node name, node CPU energy, and node memory energy
+            resource_energy[resource_name] = {
+                    'cpu_energy': resource_info['cpu_energy'],
+                    'memory_energy': resource_info['memory_energy'],
+                    'total_energy': resource_info['cpu_energy'] + resource_info['memory_energy']
+                }
 
         return resource_energy
 
@@ -45,17 +45,17 @@ class CarbonQLComponent:
         # Get the usage telemetry for all nodes
         resource_usage_telemetry = self.resource_provider.get_usage_telemetry()
 
+        resource_em = {}
         # Calculate the CPU energy consumption for each node
         for resource_name, resource_info in resource_usage_telemetry.items():
             embodied_emissions = self.sci_model.calculate_embodied_emissions(resource_info)
             resource_info['embodied_emissions'] = embodied_emissions
 
  
-        # Generate a dictionary containing the node name, node CPU energy, and node memory energy
-        resource_em = {}
-        resource_em[resource_name] = {
-                'embodied_emissions': resource_info['embodied_emissions']
-            }
+            # Generate a dictionary containing the node name, node CPU energy, and node memory energy
+            resource_em[resource_name] = {
+                    'embodied_emissions': resource_info['embodied_emissions']
+                }
 
         return resource_em
     
@@ -78,6 +78,9 @@ class CarbonQLComponent:
         node_embodied_emissions = self.get_embodied_emissions()
         region_carbon_intensity = self.get_region_carbon_intensity()
 
+
+        print(node_energy)
+        print(node_embodied_emissions)
         # Merge the dictionaries by node name
         nodes = {}
         for d in [node_energy, node_embodied_emissions]:

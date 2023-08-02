@@ -11,13 +11,15 @@ from prometheus_client import start_wsgi_server
 class SCIMetricsExporter:
     def __init__(self, carbonql_component, port=8000):
         self.carbonql_component = carbonql_component
+        self.resource_metadata = self.carbonql_component.resource_provider.get_metadata()
         self.hostname = "toto"
 
         # Define the Prometheus metrics
-        self.E = Gauge('E', 'Description of E', ['hostname'])
-        self.M = Gauge('M', 'Description of M', ['hostname'])
-        self.I = Gauge('I', 'Description of I', ['hostname'])
-        self.SCI = Gauge('SCI', 'Description of SCI', ['hostname'])
+        self.E = Gauge('E', 'Description of E', ['node_name', 'cluster_name'])
+        print(self.resource_metadata)
+        self.M = Gauge('M', 'Description of M', ['node_name', 'cluster_name'])
+        self.I = Gauge('I', 'Description of I', ['node_name', 'cluster_name'])
+        self.SCI = Gauge('SCI', 'Description of SCI', ['node_name', 'cluster_name'])
 
         # Start the Prometheus HTTP server
         self.app = make_wsgi_app()
@@ -30,10 +32,10 @@ class SCIMetricsExporter:
 
         for node_name, sci_metrics in nodes_sci_metrics.items():
             # Set the values for each metric with the hostname label
-            self.E.labels(hostname=self.hostname).set(sci_metrics['E'])
-            self.M.labels(hostname=self.hostname).set(sci_metrics['M'])
-            self.I.labels(hostname=self.hostname).set(sci_metrics['I'])
-            self.SCI.labels(hostname=self.hostname).set(sci_metrics['SCI'])
+            self.E.labels(node_name=node_name, cluster_name='sus-aks-lab').set(sci_metrics['E'])
+            self.M.labels(node_name=node_name, cluster_name='sus-aks-lab').set(sci_metrics['M'])
+            self.I.labels(node_name=node_name, cluster_name='sus-aks-lab').set(sci_metrics['I'])
+            self.SCI.labels(node_name=node_name, cluster_name='sus-aks-lab').set(sci_metrics['SCI'])
 
     def start_http_server(self):
         start_http_server(int(self.port), addr='0.0.0.0')

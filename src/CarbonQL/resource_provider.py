@@ -94,11 +94,11 @@ class NodeResourceProvider(CarbonQLResourceProvider):
 
             # Convert CPU and memory usage to floats
             cpu_usage = float(cpu_usage_str.rstrip('n').rstrip('u')) / 1000
-            memory_usage = float(memory_usage_str.rstrip('Ki')) / (1024 ** 2)
+            memory_usage = float(memory_usage_str.rstrip('Ki').rstrip('M')) / (1024 ** 2)
 
             # Convert allocatable CPU and memory to floats
             allocatable_cpu = float(allocatable_cpu_str.rstrip('m')) / 1000
-            allocatable_memory = float(allocatable_memory_str.rstrip('Ki'))
+            allocatable_memory = float(allocatable_memory_str.rstrip('Ki').rstrip('M'))
 
             # Calculate the percentage utilization of CPU and memory
             cpu_usage_percentage = (cpu_usage / allocatable_cpu) * 100

@@ -22,7 +22,7 @@ def app():
     # Export the SCI metrics to Prometheus
     while True:
         exporter.export_sci_metrics()
-        time.sleep(2)
+        time.sleep(5)
     # Export the SCI metrics to Prometheus
     #exporter.export_sci_metrics()
 
