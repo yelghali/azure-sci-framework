@@ -4,7 +4,7 @@ class CarbonIntensityProvider:
 
     def get_carbon_intensity(self):
         # Implementation of get_carbon_intensity method
-        print("returning carbon intensity default value : 100")
+        #print("returning carbon intensity default value : 100")
         return 100
         pass
 

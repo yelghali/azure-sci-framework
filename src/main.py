@@ -1,5 +1,7 @@
 from CarbonQL import CarbonQLComponent, CarbonIntensityProvider, NodeResourceProvider, NodeSCIModel, SCIMetricsExporter
 
+import time
+
 def app():
 
     WattTimeCarbonIntensityProvider = CarbonIntensityProvider(source='watttime')
@@ -14,10 +16,15 @@ def app():
     print(component.get_sci_metrics())
 
     # Create an instance of the SCIMetricsExporter class (to export metrics to a Metrics Workspace such as Prometheus or Azure Monitor)
-    exporter = SCIMetricsExporter('node2', 8081, component)
-
+    exporter = SCIMetricsExporter(port=8000, carbonql_component=component)
+    
+    exporter.start_http_server()
     # Export the SCI metrics to Prometheus
-    exporter.export_sci_metrics()
+    while True:
+        exporter.export_sci_metrics()
+        time.sleep(2)
+    # Export the SCI metrics to Prometheus
+    #exporter.export_sci_metrics()
 
 if __name__ == '__main__':
     app()

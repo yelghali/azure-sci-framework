@@ -93,7 +93,7 @@ class NodeResourceProvider(CarbonQLResourceProvider):
                 raise ValueError(f"Invalid allocatable memory value for node {node_name}")
 
             # Convert CPU and memory usage to floats
-            cpu_usage = float(cpu_usage_str.rstrip('n')) / 1000
+            cpu_usage = float(cpu_usage_str.rstrip('n').rstrip('u')) / 1000
             memory_usage = float(memory_usage_str.rstrip('Ki')) / (1024 ** 2)
 
             # Convert allocatable CPU and memory to floats

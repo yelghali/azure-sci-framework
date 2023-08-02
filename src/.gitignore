@@ -1,0 +1,6 @@
+# Ignore any file or directory named config
+**/config
+
+# Ignore other files and directories
+node_modules/
+dist/
