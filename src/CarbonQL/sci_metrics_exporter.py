@@ -6,7 +6,7 @@ import json
 from prometheus_client import Gauge, generate_latest, CONTENT_TYPE_LATEST
 from prometheus_client.exposition import make_wsgi_app
 from wsgiref.simple_server import make_server
-
+from prometheus_client import start_wsgi_server
 
 class SCIMetricsExporter:
     def __init__(self, carbonql_component, port=8000):
@@ -36,7 +36,5 @@ class SCIMetricsExporter:
             self.SCI.labels(hostname=self.hostname).set(sci_metrics['SCI'])
 
     def start_http_server(self):
-        #httpd = make_server('', self.port, self.app)
-        #print(f'Serving Prometheus metrics on http://localhost:{self.port}/metrics')
-        #httpd.serve_forever()
-        start_http_server(self.port)
+        start_http_server(int(self.port), addr='0.0.0.0')
+        print(f'Serving Prometheus metrics on http://localhost:{self.port}/metrics')
