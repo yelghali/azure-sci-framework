@@ -1,11 +1,39 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List
+from pydantic import BaseModel
 
 
 class AuthParams(ABC):
     @abstractmethod
     def get_auth_params(self) -> Dict[str, str]:
         pass
+
+
+class SCIImpactMetricsInterface(BaseModel):
+    name: str = "SCI Impact Metrics"
+    unit: str = "severalUnits"
+    description: str = "Description of SCI Impact Metrics"
+    E_CPU: float
+    E_MEM: float
+    E_GPU: float
+    E: float
+    I: float
+    M: float
+    SCI: float
+    metadata: Dict[str, str]
+
+    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str]):
+        super().__init__(
+        name = metrics.get('name'),
+        E_CPU = metrics.get('E_CPU'),
+        E_MEM = metrics.get('E_MEM'),
+        E_GPU = metrics.get('E_GPU'),
+        E = metrics.get('E'),
+        I = metrics.get('I'),
+        M = metrics.get('M'),
+        SCI = metrics.get('SCI'),
+        metadata = metadata)
+
 
 
 class ImpactModelPluginInterface(ABC):
@@ -25,7 +53,7 @@ class ImpactModelPluginInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100) -> Dict[str, object]:
+    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         pass
 
 
@@ -90,7 +118,7 @@ class ImpactNodeInterface(ABC):
         #lookup the static params for the model, corresponding to the fetched resources
         pass
 
-    def calculate(self, carbon_intensity : float = 100) -> Dict[str, object]:
+    def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity)
 
     def model_identifier(self) -> str:

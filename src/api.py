@@ -18,16 +18,16 @@ from lib.MetricsExporter.exporter import MetricsExporter
 
 
 
-class Component(BaseModel):
-    auth_params: Dict[str, str]
+class ComponentRequest(BaseModel):
     name: str
+    auth_params: Dict[str, str]
     type: str
     resource_selectors: Dict[str, str]
     metadata: Dict[str, str]
 
-class MetricsRequest(BaseModel):
+class ImpactMetricsRequest(BaseModel):
     app_name: str
-    components: List[Component]
+    components: List[ComponentRequest]
     interval: str
     timespan: str
 
@@ -36,7 +36,7 @@ app = FastAPI()
 aggregation = MetricAggregationType.AVERAGE
 
 @app.post("/metrics")
-async def get_metrics(request: MetricsRequest = Body(...)):
+async def get_metrics(request: ImpactMetricsRequest = Body(...)):
     print(request)
     data = {}
     for component in request.components:

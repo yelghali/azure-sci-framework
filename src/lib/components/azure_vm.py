@@ -1,5 +1,5 @@
 from typing import Dict, List
-from lib.ief.core import ImpactMetricInterface
+from lib.ief.core import SCIImpactMetricsInterface
 from lib.components.azure_base import AzureImpactNode
 from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.monitor import MonitorManagementClient
@@ -129,7 +129,7 @@ class AzureVM(AzureImpactNode):
 
         return self.observations     
 
-    def calculate(self):
+    def calculate(self) -> dict[str : SCIImpactMetricsInterface]:
         return self.inner_model.calculate(self.observations, carbon_intensity=100)
 
     def lookup_static_params(self) -> Dict[str, object]:

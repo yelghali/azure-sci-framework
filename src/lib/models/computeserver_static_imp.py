@@ -1,4 +1,4 @@
-from lib.ief.core import ImpactModelPluginInterface
+from lib.ief.core import ImpactModelPluginInterface, SCIImpactMetricsInterface
 from typing import Dict, List
 
 
@@ -19,7 +19,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def authenticate(self, auth_params: Dict[str, object]) -> None:
         pass
 
-    def calculate_ecpu(self, cpu_util):
+    def calculate_ecpu(self, cpu_util) -> float:
         if cpu_util is not None and 0 <= cpu_util <= 100:
             # Calculate the power consumed by the CPU using the power curve model
             pc = 0.7 * cpu_util + 0.3 * 205 # 205 W is the TDP of the processor
@@ -31,7 +31,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return 0
 
-    def calculate_emem(self, mem_util):
+    def calculate_emem(self, mem_util) -> float:
         if mem_util is not None and 0 <= mem_util <= 100:
             # Calculate the power consumed by the memory using a linear model
             pm = 0.1 * mem_util + 2.5  # 2.5 W is the idle power consumption of the memory
@@ -43,7 +43,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return 0
 
-    def calculate_egpu(self, gpu_util):
+    def calculate_egpu(self, gpu_util) -> float:
         if gpu_util is not None and 0 <= gpu_util <= 100:
             # Calculate the power consumed by the GPU using a linear model
             pg = 0.2 * gpu_util + 10  # 10 W is the idle power consumption of the GPU
@@ -55,15 +55,11 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return 0
 
-    def calculate_m(self):
+    def calculate_m(self) -> float:
         # Code to calculate M metric data
         return 40.0  # Example value
 
-    def calculate_sci(self, carbon_intensity):
-        # Code to calculate SCI metric data
-        return 5 # Example value
-
-    def calculate(self, observations, carbon_intensity: float = 100) -> Dict[str, object]:
+    def calculate(self, observations, carbon_intensity: float = 100, metadata : dict [str, str] = {}) -> dict[str, SCIImpactMetricsInterface]:
         # Create an empty dictionary to store the metrics for each resource
         resource_metrics = {}
 
@@ -84,17 +80,26 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             m = self.calculate_m()
 
             # Create a dictionary with the metric names and values for this resource
-            resource_metrics[resource_name] = {
-                'E_CPU': ecpu,
-                'E_MEM': emem,
-                'E_GPU': egpu,
-                'E': ecpu + emem + egpu,
-                'I': i,
-                'M': m,
-                'SCI': ((ecpu + emem + egpu) * i) + m 
+            impact_metrics = {
+                'name': resource_name,
+                'E_CPU': float(ecpu),
+                'E_MEM': float(emem),
+                'E_GPU': float(egpu),
+                'E': float(ecpu + emem + egpu),
+                'I': float(i),
+                'M': float(m),
+                'SCI': float(((ecpu + emem + egpu) * i) + m)
             }
+            print(impact_metrics)
+            resource_metrics[resource_name] = SCIImpactMetricsInterface(metrics=impact_metrics, metadata={"resource_name": resource_name})
 
             # Remove any metrics with None values
-            resource_metrics[resource_name] = {k: v for k, v in resource_metrics[resource_name].items() if v is not None}
+            #resource_metrics[resource_name] = {k: v for k, v in resource_metrics[resource_name].items() if v is not None}
+
+        # Create an instance of the ImpactMetricInterface with the calculated metrics
+
+        print("coucou")
+        #metrics.metrics = resource_metrics
+
 
         return resource_metrics
