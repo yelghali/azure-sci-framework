@@ -1,11 +1,12 @@
 # sample instanciation with prints of AzureVM class
 import sys
 from azure.mgmt.monitor.models import MetricAggregationType
-
+import time
 
 sys.path.append('./lib')
 from lib.components.azure_vm import AzureVM
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
+from lib.MetricsExporter.exporter import MetricsExporter
 
 auth_params = {
     "tenant_id": "12345678-1234-1234-1234-123456789012",
@@ -29,6 +30,51 @@ aggregation = MetricAggregationType.AVERAGE
 
 
 print(vm.fetch_resources())
-vm.fetch_observations(aggregation=aggregation, interval="PT15M", timespan="PT1H")
-print(vm.observations)
-print(vm.calculate())
+
+
+data = {
+    "metric_1": 1.23,
+    "metric_2": 4.56,
+    "metric_3": 7.89
+}
+
+#static method
+MetricsExporter.start_http_server(port=8000)
+while(True):
+
+    vm.fetch_observations(aggregation=aggregation, interval="PT15M", timespan="PT1H")
+    print(vm.observations)
+    data = vm.calculate()
+    print(data)
+
+    for vm_name, impacts_metrics in data.items():
+        exporter = MetricsExporter(impacts_metrics)
+        exporter.to_csv('metrics.csv')
+        exporter.to_json('metrics.json')
+        exporter.to_prometheus()
+
+    time.sleep(2)
+
+
+
+request_json = {
+    "app_name": "toto",
+    "components": [
+        {
+            "type": "AzureVM",
+            "resource_selectors": {
+                "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+                "resource_group": "webapprename",
+                "name": "tototatar"
+            }
+        },
+        {
+            "type": "AKSNode",
+            "resource_selectors": {
+                ...
+            }
+        }
+    ],
+    "interval": "PT15M",
+    "timespan": "PT1H"
+}

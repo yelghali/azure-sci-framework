@@ -9,7 +9,7 @@ from azure.mgmt.compute.models import VirtualMachine
 class AzureVM(AzureImpactNode):
     def __init__(self, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
         super().__init__(model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
-        self.name = "AzureVM"
+        self.type = "AzureVM"
         self.resources = {}
         self.observations = {}
 
@@ -39,7 +39,7 @@ class AzureVM(AzureImpactNode):
         self.resources = vms
         return self.resources
 
-    
+
 
     def fetch_observations(self, aggregation: str, timespan : str, interval: str) -> Dict[str, object]:
         """

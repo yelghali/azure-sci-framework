@@ -53,7 +53,8 @@ class ImpactMetricInterface(ABC):
 
 class ImpactNodeInterface(ABC):
     def __init__(self, model: ImpactModelPluginInterface, carbon_intensity_provider: CarbonIntensityPluginInterface, auth_object: AuthParams, resource_selectors: Dict[str, List[str]], metadata: Dict[str, object]):
-        self.name = "ImpactNodeInterface"
+        self.type = "ImpactNodeInterface"
+        self.name = "Undefined"
         self.inner_model = model
         self.carbon_intensity_provider = carbon_intensity_provider
         self.auth_object = auth_object

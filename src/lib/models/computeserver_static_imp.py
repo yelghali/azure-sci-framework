@@ -85,9 +85,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
             # Create a dictionary with the metric names and values for this resource
             resource_metrics[resource_name] = {
-                'E-CPU': ecpu,
-                'E-Mem': emem,
-                'E-GPU': egpu,
+                'E_CPU': ecpu,
+                'E_MEM': emem,
+                'E_GPU': egpu,
                 'E': ecpu + emem + egpu,
                 'I': i,
                 'M': m,
