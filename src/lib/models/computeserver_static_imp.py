@@ -93,7 +93,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
                 'SCI': float(((ecpu + emem + egpu) * i) + m)
             }
             print(impact_metrics)
-            resource_metrics[resource_name] = SCIImpactMetricsInterface(metrics=impact_metrics, metadata={"resource_name": resource_name}, observations=resource_observations)
+            resource_metrics[resource_name] = SCIImpactMetricsInterface(metrics=impact_metrics, metadata={"resource_name": resource_name}, observations=resource_observations, components=[])
 
             # Remove any metrics with None values
             #resource_metrics[resource_name] = {k: v for k, v in resource_metrics[resource_name].items() if v is not None}

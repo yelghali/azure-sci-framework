@@ -12,22 +12,22 @@ import time
 
 sys.path.append('./lib')
 from lib.components.azure_vm import AzureVM
-from lib.ief.core import ImpactNodeInterface
+from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.MetricsExporter.exporter import MetricsExporter
 
 
 
-class ComponentRequest(BaseModel):
+class ComponentDescriptionSchema(BaseModel):
     name: str
     auth_params: Dict[str, str]
     type: str
     resource_selectors: Dict[str, str]
     metadata: Dict[str, str]
 
-class ImpactMetricsRequest(BaseModel):
+class AppDescriptionSchema(BaseModel):
     app_name: str
-    components: List[ComponentRequest]
+    components: List[ComponentDescriptionSchema]
     interval: str
     timespan: str
 
@@ -36,7 +36,7 @@ app = FastAPI()
 aggregation = MetricAggregationType.AVERAGE
 
 @app.post("/metrics")
-async def get_metrics(request: ImpactMetricsRequest = Body(...)):
+async def get_metrics(request: AppDescriptionSchema = Body(...)):
     print(request)
     data = {}
     for component in request.components:

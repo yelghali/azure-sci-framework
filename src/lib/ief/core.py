@@ -10,10 +10,10 @@ class AuthParams(ABC):
 
 
 class SCIImpactMetricsInterface(BaseModel):
-    name: str = "SCI Impact Metrics"
+    name: str = "Name of the measured ImpactNode resource"
     unit: str = "severalUnits"
-    type : str = "impactnode"
-    model : str = "SCI Impact Model"
+    type: str = "impactnode"
+    model: str = "SCI Impact Model"
     description: str = "Description of SCI Impact Metrics"
     E_CPU: float
     E_MEM: float
@@ -24,21 +24,24 @@ class SCIImpactMetricsInterface(BaseModel):
     SCI: float
     metadata: Dict[str, str] = None
     observations: Dict[str, object] = None
+    components: List['SCIImpactMetricsInterface'] = []
 
-    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None):
+    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None, components: List['SCIImpactMetricsInterface'] = None):
         super().__init__(
-        type = metrics.get('type'),
-        name = metrics.get('name'),
-        model = metrics.get('model'),
-        E_CPU = metrics.get('E_CPU'),
-        E_MEM = metrics.get('E_MEM'),
-        E_GPU = metrics.get('E_GPU'),
-        E = metrics.get('E'),
-        I = metrics.get('I'),
-        M = metrics.get('M'),
-        SCI = metrics.get('SCI'),
-        metadata = metadata,
-        observations = observations)
+            type=metrics.get('type'),
+            name=metrics.get('name'),
+            model=metrics.get('model'),
+            E_CPU=metrics.get('E_CPU'),
+            E_MEM=metrics.get('E_MEM'),
+            E_GPU=metrics.get('E_GPU'),
+            E=metrics.get('E'),
+            I=metrics.get('I'),
+            M=metrics.get('M'),
+            SCI=metrics.get('SCI'),
+            metadata=metadata,
+            observations=observations,
+            components=components)
+
 
 
 
@@ -87,7 +90,7 @@ class ImpactMetricInterface(ABC):
 
 class ImpactNodeInterface(ABC):
     def __init__(self, model: ImpactModelPluginInterface, carbon_intensity_provider: CarbonIntensityPluginInterface, auth_object: AuthParams, resource_selectors: Dict[str, List[str]], metadata: Dict[str, object]):
-        self.type = "ImpactNodeInterface"
+        self.type = "impactnode"
         self.name = "Undefined"
         self.inner_model = model
         self.carbon_intensity_provider = carbon_intensity_provider
