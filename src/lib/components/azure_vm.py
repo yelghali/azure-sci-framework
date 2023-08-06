@@ -9,7 +9,7 @@ from azure.mgmt.compute.models import VirtualMachine
 class AzureVM(AzureImpactNode):
     def __init__(self, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
         super().__init__(model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
-        self.type = "AzureVM"
+        self.type = "azurevm"
         self.resources = {}
         self.observations = {}
 

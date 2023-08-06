@@ -5,7 +5,7 @@ from typing import Dict, List
 class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def __init__(self):
         super().__init__()
-        self.name = "ComputeServer_STATIC_IMP"
+        self.name = "computeserver_static_imp"
         self.static_params = None
 
     def model_identifier(self) -> str:
@@ -81,6 +81,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
             # Create a dictionary with the metric names and values for this resource
             impact_metrics = {
+                'type': 'azurevm',
                 'name': resource_name,
                 'model': self.name,
                 'E_CPU': float(ecpu),

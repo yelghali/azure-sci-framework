@@ -1,1 +1,1 @@
-{"E_CPU": 223.19108250000002, "E_MEM": 0, "E_GPU": 0, "E": 223.19108250000002, "I": 100, "M": 40.0, "SCI": 22359.10825}
+{"tototatar": {"name": "tototatar", "unit": "severalUnits", "type": "azurevm", "model": "computeserver_static_imp", "description": "Description of SCI Impact Metrics", "E_CPU": 222.91377, "E_MEM": 0.0, "E_GPU": 0.0, "E": 222.91377, "I": 100.0, "M": 40.0, "SCI": 22331.377, "metadata": {"resource_name": "tototatar"}, "observations": {"percentage_cpu": 0.6007023809523809, "percentage_memory": 2725190353.6761904, "percentage_gpu": null}}}

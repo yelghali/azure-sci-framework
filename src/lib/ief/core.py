@@ -12,6 +12,7 @@ class AuthParams(ABC):
 class SCIImpactMetricsInterface(BaseModel):
     name: str = "SCI Impact Metrics"
     unit: str = "severalUnits"
+    type : str = "impactnode"
     model : str = "SCI Impact Model"
     description: str = "Description of SCI Impact Metrics"
     E_CPU: float
@@ -26,6 +27,7 @@ class SCIImpactMetricsInterface(BaseModel):
 
     def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None):
         super().__init__(
+        type = metrics.get('type'),
         name = metrics.get('name'),
         model = metrics.get('model'),
         E_CPU = metrics.get('E_CPU'),

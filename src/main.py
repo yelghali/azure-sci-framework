@@ -47,11 +47,11 @@ while(True):
     data = vm.calculate()
     print(data)
 
-    for vm_name, impacts_metrics in data.items():
-        exporter = MetricsExporter(impacts_metrics)
-        exporter.to_csv('metrics.csv')
-        exporter.to_json('metrics.json')
-        exporter.to_prometheus()
+    
+    exporter = MetricsExporter(data)
+    exporter.to_csv('metrics.csv')
+    exporter.to_json('metrics.json')
+    exporter.to_prometheus()
 
     time.sleep(2)
 
