@@ -31,3 +31,4 @@ aggregation = MetricAggregationType.AVERAGE
 print(vm.fetch_resources())
 vm.fetch_observations(aggregation=aggregation, interval="PT15M", timespan="PT1H")
 print(vm.observations)
+print(vm.calculate())

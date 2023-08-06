@@ -39,7 +39,7 @@ class AzureVM(AzureImpactNode):
         self.resources = vms
         return self.resources
 
-
+    
 
     def fetch_observations(self, aggregation: str, timespan : str, interval: str) -> Dict[str, object]:
         """
@@ -48,7 +48,6 @@ class AzureVM(AzureImpactNode):
         :param metric_names: A list of metric names to fetch.
         :param aggregation: The aggregation type to use.
         :param interval: The time interval to fetch data for.
-        :param tags: A dictionary of tags to filter by.
         :return: A dictionary containing metric observations.
         """
         subscription_id = self.resource_selectors.get("subscription_id", None)
@@ -130,8 +129,8 @@ class AzureVM(AzureImpactNode):
 
         return self.observations     
 
-    def calculate(self, observations=None):
-        return self.inner_model.calculate(observations)
+    def calculate(self):
+        return self.inner_model.calculate(self.observations, carbon_intensity=100)
 
     def lookup_static_params(self) -> Dict[str, object]:
         return {}

@@ -25,7 +25,7 @@ class ImpactModelPluginInterface(ABC):
         pass
 
     @abstractmethod
-    async def calculate(self, observations: Dict[str, object] = None) -> Dict[str, object]:
+    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100) -> Dict[str, object]:
         pass
 
 
@@ -89,8 +89,8 @@ class ImpactNodeInterface(ABC):
         #lookup the static params for the model, corresponding to the fetched resources
         pass
 
-    def calculate(self, observations: List[Dict[str, object]]) -> Dict[str, object]:
-        return self.inner_model.calculate(observations)
+    def calculate(self, carbon_intensity : float = 100) -> Dict[str, object]:
+        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity)
 
     def model_identifier(self) -> str:
         return self.inner_model.model_identifier()
