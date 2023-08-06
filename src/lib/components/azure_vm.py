@@ -5,6 +5,7 @@ from azure.mgmt.compute import ComputeManagementClient
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.mgmt.compute.models import VirtualMachine
 
+from azure.mgmt.monitor.models import MetricAggregationType
 
 class AzureVM(AzureImpactNode):
     def __init__(self, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
@@ -39,9 +40,9 @@ class AzureVM(AzureImpactNode):
         self.resources = vms
         return self.resources
 
+    aggregation = MetricAggregationType.AVERAGE
 
-
-    def fetch_observations(self, aggregation: str, timespan : str, interval: str) -> Dict[str, object]:
+    def fetch_observations(self, aggregation: str = aggregation, timespan : str = "PT1H", interval: str = "PT15M") -> Dict[str, object]:
         """
         Fetches a dictionary of metric observations from Azure Monitor.
 
@@ -129,7 +130,7 @@ class AzureVM(AzureImpactNode):
 
         return self.observations     
 
-    def calculate(self) -> dict[str : SCIImpactMetricsInterface]:
+    def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
         return self.inner_model.calculate(self.observations, carbon_intensity=100)
 
     def lookup_static_params(self) -> Dict[str, object]:
