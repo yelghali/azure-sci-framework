@@ -1,30 +1,32 @@
-from CarbonQL import CarbonQLComponent, CarbonIntensityProvider, NodeResourceProvider, NodeSCIModel, SCIMetricsExporter
+# sample instanciation with prints of AzureVM class
+import sys
+from azure.mgmt.monitor.models import MetricAggregationType
 
-import time
 
-def app():
+sys.path.append('./lib')
+from lib.components.azure_vm import AzureVM
+from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 
-    WattTimeCarbonIntensityProvider = CarbonIntensityProvider(source='watttime')
-    # Create an instance of the CarbonQLComponent class
-    component = CarbonQLComponent(carbon_intensity_provider=WattTimeCarbonIntensityProvider, resource_provider_class=NodeResourceProvider, sci_model_class=NodeSCIModel, resource_label_selectors=['label1', 'label2'])
-    
-    print(component.resource_provider.get_metadata())
-    print(component.resource_provider.get_usage_telemetry())
-    print(component.get_sci_model())
-    print(component.get_total_energy())
-    print(component.get_embodied_emissions())
-    print(component.get_sci_metrics())
+auth_params = {
+    "tenant_id": "12345678-1234-1234-1234-123456789012",
+    "client_id": "12345678-1234-1234-1234-123456789012",
+    "client_secret": "12345678-1234-1234-1234-123456789012"
+}
 
-    # Create an instance of the SCIMetricsExporter class (to export metrics to a Metrics Workspace such as Prometheus or Azure Monitor)
-    exporter = SCIMetricsExporter(port=8000, carbonql_component=component)
-    
-    exporter.start_http_server()
-    # Export the SCI metrics to Prometheus
-    while True:
-        exporter.export_sci_metrics()
-        time.sleep(5)
-    # Export the SCI metrics to Prometheus
-    #exporter.export_sci_metrics()
+resource_selectors = {
+    "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+    "resource_group": "webapprename",
+    "name": "tototatar"
+}
 
-if __name__ == '__main__':
-    app()
+metadata = {
+    "region": "westeurope"
+}
+
+vm = AzureVM(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors=resource_selectors, metadata=metadata)
+
+aggregation = MetricAggregationType.AVERAGE
+
+print(vm)
+print(vm.fetch_resources())
+vm.fetch_observations(aggregation=aggregation, interval="PT5M", timespan="PT1H")
