@@ -76,7 +76,7 @@ class AzureVM(AzureImpactNode):
                     for time_series_element in metric_data.timeseries:
                         for metric_value in time_series_element.data:
                             #print(metric_value)
-                            cpu_util_list.append(metric_value.average)
+                            cpu_util_list.append(float(metric_value.average))
 
                 cpu_utilization = sum(cpu_util_list) / len(cpu_util_list) if len(cpu_util_list) > 0 else None
                 #print(cpu_utilization)
@@ -94,7 +94,7 @@ class AzureVM(AzureImpactNode):
                     metric_data = memory_data.value[0]
                     for time_series_element in metric_data.timeseries:
                         for metric_value in time_series_element.data:
-                            memory_util_list.append(metric_value.average)
+                            memory_util_list.append(float(metric_value.average))
                 memory_utilization = sum(memory_util_list) / len(memory_util_list) if len(memory_util_list) > 0 else None
                 #print(memory_utilization)
 
@@ -116,7 +116,7 @@ class AzureVM(AzureImpactNode):
                                 metric_data = gpu_data.value[0]
                                 for time_series_element in metric_data.timeseries:
                                     for metric_value in time_series_element.data:
-                                        gpu_util_list.append(metric_value.average)
+                                        gpu_util_list.append(float(metric_value.average))
                     gpu_utilization = sum(gpu_util_list) / len(gpu_util_list) if len(gpu_util_list) > 0 else None
 
                 #print(gpu_utilization)

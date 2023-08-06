@@ -66,9 +66,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         # Iterate over the observations for each resource
         for resource_name, resource_observations in observations.items():
             # Get the CPU utilization, memory utilization, and GPU utilization from the observations
-            cpu_util = resource_observations.get("percentage_cpu", None)
-            mem_util = resource_observations.get("percentage_memory", None)
-            gpu_util = resource_observations.get("percentage_gpu", None)
+            cpu_util = resource_observations.get("percentage_cpu", 0)
+            mem_util = resource_observations.get("percentage_memory", 0)
+            gpu_util = resource_observations.get("percentage_gpu", 0)
 
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
             ecpu = self.calculate_ecpu(cpu_util)
@@ -82,6 +82,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             # Create a dictionary with the metric names and values for this resource
             impact_metrics = {
                 'name': resource_name,
+                'model': self.name,
                 'E_CPU': float(ecpu),
                 'E_MEM': float(emem),
                 'E_GPU': float(egpu),
@@ -91,7 +92,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
                 'SCI': float(((ecpu + emem + egpu) * i) + m)
             }
             print(impact_metrics)
-            resource_metrics[resource_name] = SCIImpactMetricsInterface(metrics=impact_metrics, metadata={"resource_name": resource_name})
+            resource_metrics[resource_name] = SCIImpactMetricsInterface(metrics=impact_metrics, metadata={"resource_name": resource_name}, observations=resource_observations)
 
             # Remove any metrics with None values
             #resource_metrics[resource_name] = {k: v for k, v in resource_metrics[resource_name].items() if v is not None}
