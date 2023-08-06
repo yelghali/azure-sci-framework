@@ -11,6 +11,7 @@ class AzureVM(AzureImpactNode):
         super().__init__(model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
         self.name = "AzureVM"
         self.resources = {}
+        self.observations = {}
 
     def list_supported_skus(self):
         return ["D3V4"]
@@ -50,11 +51,8 @@ class AzureVM(AzureImpactNode):
         :param tags: A dictionary of tags to filter by.
         :return: A dictionary containing metric observations.
         """
-        observations = {}
         subscription_id = self.resource_selectors.get("subscription_id", None)
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
-
-        print(self.resources)
 
         for resource_name, resource  in self.resources.items():
             if resource.type == 'Microsoft.Compute/virtualMachines':
@@ -63,6 +61,7 @@ class AzureVM(AzureImpactNode):
                 cpu_utilization = None
                 memory_utilization = None
                 gpu_utilization = None
+
                 # Fetch CPU utilization
                 cpu_data = monitor_client.metrics.list(
                     resource_uri=vm_id,
@@ -77,11 +76,11 @@ class AzureVM(AzureImpactNode):
                     metric_data = cpu_data.value[0]
                     for time_series_element in metric_data.timeseries:
                         for metric_value in time_series_element.data:
+                            #print(metric_value)
                             cpu_util_list.append(metric_value.average)
 
                 cpu_utilization = sum(cpu_util_list) / len(cpu_util_list) if len(cpu_util_list) > 0 else None
-
-                print(cpu_utilization)
+                #print(cpu_utilization)
     
                 # Fetch memory utilization
                 memory_data = monitor_client.metrics.list(
@@ -91,15 +90,17 @@ class AzureVM(AzureImpactNode):
                     interval=interval,
                     timespan=timespan
                 )
+                memory_util_list = []
                 if memory_data.value:
                     metric_data = memory_data.value[0]
                     for time_series_element in metric_data.timeseries:
                         for metric_value in time_series_element.data:
-                            memory_utilization = metric_value.average
-
-                print(memory_utilization)
+                            memory_util_list.append(metric_value.average)
+                memory_utilization = sum(memory_util_list) / len(memory_util_list) if len(memory_util_list) > 0 else None
+                #print(memory_utilization)
 
                 # Fetch GPU utilization (if available)
+                gpu_util_list = []
                 if resource.resources is not None:
                     for extension in resource.resources:
                         # Fetch GPU utilization (if available)
@@ -111,21 +112,23 @@ class AzureVM(AzureImpactNode):
                                 interval=interval,
                                 timespan=timespan
                             )
+                            
                             if gpu_data.value:
                                 metric_data = gpu_data.value[0]
                                 for time_series_element in metric_data.timeseries:
                                     for metric_value in time_series_element.data:
-                                        gpu_utilization = metric_value.average
+                                        gpu_util_list.append(metric_value.average)
+                    gpu_utilization = sum(gpu_util_list) / len(gpu_util_list) if len(gpu_util_list) > 0 else None
 
-                print(gpu_utilization)
+                #print(gpu_utilization)
 
-                observations[vm_name] = {
-                    'cpu_utilization': cpu_utilization,
-                    'memory_utilization': memory_utilization,
-                    'gpu_utilization': gpu_utilization
+                self.observations[vm_name] = {
+                    'percentage_cpu': cpu_utilization,
+                    'percentage_memory': memory_utilization,
+                    'percentage_gpu': gpu_utilization
                 }
 
-        return observations     
+        return self.observations     
 
     def calculate(self, observations=None):
         return self.inner_model.calculate(observations)

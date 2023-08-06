@@ -27,6 +27,7 @@ vm = AzureVM(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors=r
 
 aggregation = MetricAggregationType.AVERAGE
 
-print(vm)
+
 print(vm.fetch_resources())
-vm.fetch_observations(aggregation=aggregation, interval="PT5M", timespan="PT1H")
+vm.fetch_observations(aggregation=aggregation, interval="PT15M", timespan="PT1H")
+print(vm.observations)
