@@ -23,9 +23,9 @@ class SCIImpactMetricsInterface(BaseModel):
     M: float
     SCI: float
 
-    metadata: Dict[str, str] = None
-    observations: Dict[str, object] = None
-    components: Dict[str, 'SCIImpactMetricsInterface'] = {}
+    metadata: Dict[str, str] = {}
+    observations: Dict[str, object] = {}
+    components: List[Dict[str,'SCIImpactMetricsInterface']] = []
 
     def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = []):
         
@@ -44,10 +44,10 @@ class SCIImpactMetricsInterface(BaseModel):
             SCI=metrics.get('SCI'),
             metadata=metadata,
             observations=observations,
+            components=components_list
             )
+        # we want only the SCIMetricInterface
 
-        for c in components_list:
-            self.components[c.get('name', 'undefined')] = c
 
 
 class ImpactModelPluginInterface(ABC):
@@ -150,11 +150,11 @@ class ImpactNodeInterface(ABC):
 
 class AggregatedImpactNodesInterface(ABC):
     def __init__(self, name, components : List[ImpactNodeInterface], carbon_intensity_provider: CarbonIntensityPluginInterface = None, type=None, model=None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {} ):
-        self.components = {c.name: c for c in components}  # Convert the list of components to a dictionary
+        self.components = components  
         self.resource_selectors = resource_selectors
         self.metadata = metadata
         self.inner_model = "sumofcomponents"
-        self.type = type if type is not None else "impactnode"
+        self.type = type if type is not None else "aggregatedimpactnode"
         self.name = name if name is not None else "undefined"
         self.carbon_intensity_provider = carbon_intensity_provider
         self.auth_object = auth_object
@@ -180,23 +180,26 @@ class AggregatedImpactNodesInterface(ABC):
         # Calculate the metrics for each child component and sum their metrics
         resource_metrics = {}
         metrics_list = []
-        for component_name, component in self.components.items():
+        node_metrics = []
+        for component in self.components:
+            print (component)
             component.fetch_resources()
             component.fetch_observations(aggregation, interval="PT15M", timespan="PT1H")
             impact_metrics = component.calculate(carbon_intensity=carbon_intensity)
-
+            node_metrics.append(impact_metrics)
+            for node_name, node_impact_metric in impact_metrics.items():
             # store the component in the dict
-            resource_metrics[impact_metrics.get('name', 'undefined')] = impact_metrics
-            metrics_list.append(impact_metrics)
+                metrics_list.append(node_impact_metric)
 
+        print(metrics_list)
         # Calculate the total metrics for the aggregated component
-        E_CPU = sum(metrics.get('E', 0) for metrics in resource_metrics.values())
-        E_MEM = sum(metrics.get('E_MEM', 0) for metrics in resource_metrics.values())
-        E_GPU = sum(metrics.get('E_GPU', 0) for metrics in resource_metrics.values())
-        E = sum(metrics.get('E', 0) for metrics in resource_metrics.values())
+        E_CPU = sum(component.E_CPU for component in metrics_list)
+        E_MEM = sum(component.E_MEM for component in metrics_list)
+        E_GPU = sum(component.E_GPU for component in metrics_list)
+        E = sum(component.E for component in metrics_list)
         I = carbon_intensity
-        M = sum(metrics.get('M', 0) for metrics in resource_metrics.values())
-        SCI = sum(metrics.get('SCI', 0) for metrics in resource_metrics.values())
+        M = sum(component.M for component in metrics_list)
+        SCI = sum(component.SCI for component in metrics_list)
 
         # Create a new SCIImpactMetricsInterface instance with the calculated metrics
         aggregated_metrics = {
@@ -213,8 +216,9 @@ class AggregatedImpactNodesInterface(ABC):
         }
         aggregated_metadata = {'aggregated': "True"}
         aggregated_observations = {}
-        aggregated_components = metrics_list
+        aggregated_components = node_metrics
 
+        print(aggregated_metrics)
         toto = {}
         toto[self.name] = SCIImpactMetricsInterface(
             metrics=aggregated_metrics,

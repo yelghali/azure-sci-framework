@@ -54,16 +54,16 @@ async def get_metrics(request: AggregatedComponentRequest = Body(...)):
             continue
 
 
-        # Create an instance of the AggregatedImpactNodesInterface class for the aggregated component
-        aggregated_component = AggregatedImpactNodesInterface(
-            name=request.app_name,
-            components=components
-        )
+    # Create an instance of the AggregatedImpactNodesInterface class for the aggregated component
+    aggregated_component = AggregatedImpactNodesInterface(
+        name=request.app_name,
+        components=components
+    )
 
-        # Calculate the metrics for the aggregated component and its child components
-        metrics = aggregated_component.calculate()
+    # Calculate the metrics for the aggregated component and its child components
+    metrics = aggregated_component.calculate()
 
-        return metrics
+    return metrics
 
 
 def main():
