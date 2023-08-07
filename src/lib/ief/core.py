@@ -5,7 +5,7 @@ from azure.mgmt.monitor.models import MetricAggregationType
 
 class AuthParams(ABC):
     @abstractmethod
-    def get_auth_params(self) -> Dict[str, str]:
+    def get_credential(self) -> Dict[str, str]:
         pass
 
 

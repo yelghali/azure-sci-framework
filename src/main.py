@@ -5,6 +5,7 @@ import time
 
 sys.path.append('./lib')
 from lib.components.azure_vm import AzureVM
+from lib.components.azure_aks_node import AKSNode
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.MetricsExporter.exporter import MetricsExporter
 
@@ -16,8 +17,10 @@ auth_params = {
 
 resource_selectors = {
     "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
-    "resource_group": "webapprename",
-    "name": "tototatar"
+    "resource_group": "sus-aks-lab",
+    "name": "tototatar",
+    "cluster_name": "sus-aks-lab",
+    "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
 }
 
 metadata = {
@@ -26,9 +29,19 @@ metadata = {
 
 vm = AzureVM(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors=resource_selectors, metadata=metadata)
 
+
+node = AKSNode(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors=resource_selectors, metadata=metadata)
+
 aggregation = MetricAggregationType.AVERAGE
 
+print(node)
+node.fetch_resources()
 
+print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
+
+print(node.calculate())
+
+""""
 print(vm.fetch_resources())
 
 
@@ -78,3 +91,4 @@ request_json = {
     "interval": "PT15M",
     "timespan": "PT1H"
 }
+"""

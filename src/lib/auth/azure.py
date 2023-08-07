@@ -8,9 +8,9 @@ class AzureManagedIdentityAuthParams(AuthParams):
     def __init__(self, resource: str):
         self.resource = resource
 
-    def get_auth_params(self) -> Dict[str, str]:
-
+    def get_credential(self) -> Dict[str, str]:
 
         credential = DefaultAzureCredential()
-        token = credential.get_token(self.resource)
-        return {'Authorization': f'Bearer {token.token}'}
+        #token = credential.get_token(self.resource)
+        #return {'Authorization': f'Bearer {token.token}'}
+        return credential
