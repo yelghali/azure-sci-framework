@@ -71,19 +71,21 @@ class AzureVM(AzureImpactNode):
                     timespan=timespan
                 )
 
-                cpu_util_list = []
-                if cpu_data.value:
-                    metric_data = cpu_data.value[0]
-                    for time_series_element in metric_data.timeseries:
-                        for metric_value in time_series_element.data:
-                            print(metric_value)
-                            if metric_value.average is not None:
-                                cpu_util_list.append(float(metric_value.average))
+                # Calculate the average percentage CPU utilization
+                total_cpu_utilization = 0
+                data_points = 0
+                for metric in cpu_data.value:
+                    for time_series in metric.timeseries:
+                        for data in time_series.data:
+                            if data.average is not None:
+                                total_cpu_utilization += data.average
+                                data_points += 1
 
-                cpu_utilization = sum(cpu_util_list) / len(cpu_util_list) if len(cpu_util_list) > 0 else None
+                average_cpu_utilization = total_cpu_utilization / data_points
+                cpu_utilization = average_cpu_utilization
                 #print(cpu_utilization)
     
-                # Fetch memory utilization
+                # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
                 memory_data = monitor_client.metrics.list(
                     resource_uri=vm_id,
                     metricnames='Available Memory Bytes',
@@ -91,14 +93,17 @@ class AzureVM(AzureImpactNode):
                     interval=interval,
                     timespan=timespan
                 )
-                memory_util_list = []
-                if memory_data.value:
-                    metric_data = memory_data.value[0]
-                    for time_series_element in metric_data.timeseries:
-                        for metric_value in time_series_element.data:
-                            if metric_value.average is not None:
-                                memory_util_list.append(float(metric_value.average))
-                memory_utilization = sum(memory_util_list) / len(memory_util_list) if len(memory_util_list) > 0 else None
+                
+                # Calculate the sum of memory usage in gigabytes, during the timespan
+                total_memory_usage = 0
+                for metric in memory_data.value:
+                    for time_series in metric.timeseries:
+                        for data in time_series.data:
+                            if data.average is not None:
+                                total_memory_usage += data.average
+
+                total_memory_usage /= (1024 ** 3) # Convert from bytes to gigabytes
+                memory_utilization = total_memory_usage
                 #print(memory_utilization)
 
                 # Fetch GPU utilization (if available)

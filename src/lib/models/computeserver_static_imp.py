@@ -23,14 +23,14 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         pass
 
 
-    def calculate_ecpu(self, cpu_utilization, tdp=200, timespan='PT15M'):
+    def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H'):
         if tdp <= 0:
             raise ValueError("TDP must be a positive number")
-        if cpu_utilization <= 0:
+        if cpu_utilization_during_timespan <= 0:
             tdp_coefficient = 0.12
-        elif cpu_utilization <= 10:
+        elif cpu_utilization_during_timespan <= 10:
             tdp_coefficient = 0.32
-        elif cpu_utilization <= 50:
+        elif cpu_utilization_during_timespan <= 50:
             tdp_coefficient = 0.75
         else:
             tdp_coefficient = 1.02
@@ -41,17 +41,15 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         return energy_consumption
 
 
-    def calculate_emem(self, mem_util) -> float:
-        if mem_util is not None and 0 <= mem_util <= 100:
-            # Calculate the power consumed by the memory using a linear model
-            pm = 0.1 * mem_util + 2.5  # 2.5 W is the idle power consumption of the memory
+    def calculate_emem(self, ram_size_gb_during_timespan):
+        if ram_size_gb_during_timespan <= 0:
+            raise ValueError("RAM size must be a positive number")
 
-            # Calculate the energy consumed by the memory over the past hour
-            emem = pm * 3600 / 1000  # Convert from Ws to kWh
+        energy_per_gb = 0.38  # kWh per GB
 
-            return emem
+        energy_consumption = energy_per_gb * ram_size_gb_during_timespan # kWh per GB * GB = kWh
+        return energy_consumption
 
-        return 0
 
     def calculate_egpu(self, gpu_util) -> float:
         if gpu_util is not None and 0 <= gpu_util <= 100:
