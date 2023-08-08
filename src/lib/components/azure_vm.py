@@ -144,9 +144,9 @@ class AzureVM(AzureImpactNode):
 
 
                 self.observations[vm_name] = {
-                    'percentage_cpu': cpu_utilization,
-                    'percentage_memory': memory_utilization,
-                    'percentage_gpu': gpu_utilization
+                    'average_cpu_percentage': cpu_utilization,
+                    'average_memory_gb': memory_utilization,
+                    'average_gpu_percentage': gpu_utilization
                 }
 
         return self.observations     

@@ -101,9 +101,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         # Iterate over the observations for each resource
         for resource_name, resource_observations in observations.items():
             # Get the CPU utilization, memory utilization, and GPU utilization from the observations
-            cpu_util = resource_observations.get("percentage_cpu", 0)
-            mem_util = resource_observations.get("percentage_memory", 0)
-            gpu_util = resource_observations.get("percentage_gpu", 0)
+            cpu_util = resource_observations.get("average_cpu_percentage", 0)
+            mem_util = resource_observations.get("average_memory_gb", 0)
+            gpu_util = resource_observations.get("average_gpu_percentage", 0)
 
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
             ecpu = self.calculate_ecpu(cpu_util)
