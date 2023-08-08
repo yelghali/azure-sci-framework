@@ -109,14 +109,10 @@ class AzureVM(AzureImpactNode):
                                 average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
 
                 average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
-                print(average_consumed_memory_gb_items)
-                print(average_consumed_memory_gb_during_timespan)
-                print(total_memory_allocated)
                 memory_utilization = average_consumed_memory_gb_during_timespan
-                #print(memory_utilization)
 
                 # Fetch GPU utilization (if available)
-                gpu_util_list = []
+                gpu_utilization = 0
                 if resource.resources is not None:
                     for extension in resource.resources:
                         # Fetch GPU utilization (if available)
@@ -130,14 +126,22 @@ class AzureVM(AzureImpactNode):
                             )
                             
                             if gpu_data.value:
-                                metric_data = gpu_data.value[0]
-                                for time_series_element in metric_data.timeseries:
-                                    for metric_value in time_series_element.data:
-                                        if metric_value.average is not None:
-                                            gpu_util_list.append(float(metric_value.average))
-                    gpu_utilization = sum(gpu_util_list) / len(gpu_util_list) if len(gpu_util_list) > 0 else None
+                                total_gpu_utilization = 0
+                                data_points = 0
+                                # Calculate the average percentage GPU utilization
+                                for metric in cpu_data.value:
+                                    for time_series in metric.timeseries:
+                                        for data in time_series.data:
+                                            if data.average is not None:
+                                                total_cpu_utilization += data.average
+                                                data_points += 1
 
-                #print(gpu_utilization)
+                                if data_points > 0 : 
+                                    average_gpu_utilization = total_gpu_utilization / data_points 
+                                else : 
+                                    average_gpu_utilization = 0
+                                gpu_utilization = average_gpu_utilization
+
 
                 self.observations[vm_name] = {
                     'percentage_cpu': cpu_utilization,

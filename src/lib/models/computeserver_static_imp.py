@@ -51,17 +51,23 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         return energy_consumption
 
 
-    def calculate_egpu(self, gpu_util) -> float:
-        if gpu_util is not None and 0 <= gpu_util <= 100:
-            # Calculate the power consumed by the GPU using a linear model
-            pg = 0.2 * gpu_util + 10  # 10 W is the idle power consumption of the GPU
-
-            # Calculate the energy consumed by the GPU over the past hour
-            egpu = pg * 3600 / 1000  # Convert from Ws to kWh
-
-            return egpu
-
-        return 0
+    # same for ecpu formula ; TDDO : same coefficient for both ?
+    def calculate_egpu(self, gpu_utilization_during_timespan, tdp=200, timespan='PT1H', gpu_count=2):
+        if tdp <= 0:
+            raise ValueError("TDP must be a positive number")
+        if gpu_utilization_during_timespan <= 0:
+            tdp_coefficient = 0.12
+        elif gpu_utilization_during_timespan <= 10:
+            tdp_coefficient = 0.32
+        elif gpu_utilization_during_timespan <= 50:
+            tdp_coefficient = 0.75
+        else:
+            tdp_coefficient = 1.02
+        power_consumption = tdp * tdp_coefficient
+        duration = parse_duration(timespan)
+        duartion_in_hours = float(duration.time.hours)
+        energy_consumption = gpu_count * (power_consumption * duartion_in_hours / 1000) # W * H / 1000 = KWH
+        return energy_consumption
 
     def calculate_m(self) -> float:
         # Code to calculate M metric data
