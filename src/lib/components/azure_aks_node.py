@@ -8,6 +8,7 @@ from kubernetes import client, config
 from kubernetes.config.kube_config import KubeConfigLoader
 
 import yaml
+import re
 
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.mgmt.monitor.models import MetricAggregationType
@@ -32,6 +33,15 @@ class AKSNode(AzureImpactNode):
     def list_supported_skus(self):
         return ["Standard_D2_v2"]
 
+    def _get_node_azure_id(self, node):
+        subscription_id = self.resource_selectors.get("subscription_id", None)
+        resource_group_name = self.resource_selectors.get("resource_group", None)
+        agentpool = node.metadata.labels.get("kubernetes.azure.com/agentpool", None)
+        vm_id = 5
+        resource_uri = f'subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Compute/virtualMachineScaleSets/{agentpool}/virtualMachines/{vm_id}'
+        return resource_uri
+
+
     def fetch_resources(self) -> Dict[str, Any]:
         # Load the Kubernetes configuration from the default location
         config.load_kube_config()
@@ -50,29 +60,91 @@ class AKSNode(AzureImpactNode):
         node_info = {}
         for node in nodes:
             node_name = node.metadata.name
-            node_labels = node.metadata.labels
-            node_pool_name = node_labels.get('kubernetes.azure.com/agentpool', 'unknown')
-            cluster_region = node_labels.get('failure-domain.beta.kubernetes.io/region', 'unknown')
-            node_zone = node_labels.get('failure-domain.beta.kubernetes.io/zone', 'unknown')
-            node_arch = node_labels.get('beta.kubernetes.io/arch', 'unknown')
-            node_os = node_labels.get('kubernetes.azure.com/os-sku', 'unknown')
-            node_mode = node_labels.get('kubernetes.azure.com/mode', 'unknown')
-            node_sku = node_labels.get('beta.kubernetes.io/instance-type', 'unknown')
-            node_info[node_name] = {
-                'node_name': node_name,
-                'cluster_name': current_cluster,
-                'node_pool_name': node_pool_name,
-                'cluster_region': cluster_region,
-                'node_zone': node_zone,
-                'node_arch': node_arch,
-                'node_os': node_os,
-                'node_mode': node_mode,
-                'node_sku': node_sku
-            }
+            node_info[node_name] = node
 
+        self.resources = node_info
         return node_info
 
     def fetch_observations(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
+        subscription_id = self.resource_selectors.get("subscription_id", None)
+        monitor_client = MonitorManagementClient(self.credential, subscription_id)
+        #node_id = self._get_node_id(node_name, resource_group_name)
+
+
+        observations = {}
+        for resource_name, resource  in self.resources.items():
+            vm_id = resource.spec.provider_id.replace('azure://','')
+            vm_name = resource.metadata.name
+            cpu_utilization = None
+            memory_utilization = None
+            gpu_utilization = None
+
+            # Fetch CPU utilization
+            cpu_data = monitor_client.metrics.list(
+                resource_uri=vm_id,
+                metricnames='Percentage CPU',
+                aggregation=aggregation,
+                interval=interval,
+                timespan=timespan
+            )
+
+            # Calculate the average percentage CPU utilization
+            total_cpu_utilization = 0
+            data_points = 0
+            for metric in cpu_data.value:
+                for time_series in metric.timeseries:
+                    for data in time_series.data:
+                        if data.average is not None:
+                            total_cpu_utilization += data.average
+                            data_points += 1
+
+            average_cpu_utilization = total_cpu_utilization / data_points
+            cpu_utilization = average_cpu_utilization
+            #print(cpu_utilization)
+
+            # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
+            memory_data = monitor_client.metrics.list(
+                resource_uri=vm_id,
+                metricnames='Available Memory Bytes',
+                aggregation=aggregation,
+                interval=interval,
+                timespan=timespan
+            )
+            
+            
+            # Calculate the total memory allocated to the virtual machine in bytes
+            total_memory_allocated = 1  #GB ; TODO: Fetch from VM SKU
+
+
+            # Calculate the average available memory in GB
+            average_consumed_memory_gb_items =  []
+            average_consumed_memory_gb_during_timespan = 0
+            for metric in memory_data.value:
+                for time_series in metric.timeseries:
+                    for data in time_series.data:
+                        if data.average is not None:
+                            datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
+                            average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
+
+            average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
+            memory_utilization = average_consumed_memory_gb_during_timespan
+            print(memory_utilization)
+            print(average_consumed_memory_gb_items)
+            print(total_memory_allocated)
+            # Fetch GPU utilization (if available)
+            gpu_utilization = 0 #TODO
+
+
+            if memory_utilization < 0 : memory_utilization = 0
+            self.observations[vm_name] = {
+                'average_cpu_percentage': cpu_utilization,
+                'average_memory_gb': memory_utilization,
+                'average_gpu_percentage': gpu_utilization
+            }
+
+        return self.observations   
+
+    def fetch_observations22(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
         subscription_id = self.resource_selectors.get("subscription_id", None)
         resource_group = self.resource_selectors.get("resource_group", None)
         cluster_name = self.resource_selectors.get("cluster_name", None)
