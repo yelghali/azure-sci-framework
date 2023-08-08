@@ -22,9 +22,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def authenticate(self, auth_params: Dict[str, object]) -> None:
         pass
 
-
+    #TODO : core_count variable
     def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H', core_count=2):
-        if tdp <= 0:
+        if tdp <= 0 or core_count <= 0:
             raise ValueError("TDP must be a positive number")
         if cpu_utilization_during_timespan <= 0:
             tdp_coefficient = 0.12
@@ -52,8 +52,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
 
     # same for ecpu formula ; TDDO : same coefficient for both ?
-    def calculate_egpu(self, gpu_utilization_during_timespan, tdp=200, timespan='PT1H', gpu_count=2):
-        if tdp <= 0:
+    #TODO : gpu_count variable
+    def calculate_egpu(self, gpu_utilization_during_timespan, tdp=250, timespan='PT1H', gpu_count=2):
+        if tdp <= 0 or gpu_count <= 0:
             raise ValueError("TDP must be a positive number")
         if gpu_utilization_during_timespan <= 0:
             tdp_coefficient = 0.12
@@ -69,9 +70,29 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         energy_consumption = gpu_count * (power_consumption * duartion_in_hours / 1000) # W * H / 1000 = KWH
         return energy_consumption
 
-    def calculate_m(self) -> float:
-        # Code to calculate M metric data
-        return 40.0  # Example value
+    def calculate_m(self, timespan='PT1H' ) -> float:
+        # TE: Embodied carbon estimates for the servers from the Cloud Carbon Footprint Coefficient Data Set
+        te = 0.5  # kgCO2e/hour
+
+        # TR: Time reserved for the hardware
+        tr = 1  # hour
+        duration = parse_duration(timespan)
+        duartion_in_hours = float(duration.time.hours)
+        tr = duartion_in_hours
+
+        # EL: Expected lifespan of the equipment
+        el = 35040  # hours (4 years)
+
+        # RR: Resources reserved for use by the software
+        rr = 2  # vCPUs
+
+        # TR: Total number of resources available
+        total_vcpus = 16
+
+        # Calculate M using the equation M = TE * (TR/EL) * (RR/TR)
+        m = te * (tr / el) * (rr / total_vcpus)
+
+        return m
 
     def calculate(self, observations, carbon_intensity: float = 100, metadata : dict [str, str] = {}) -> dict[str, SCIImpactMetricsInterface]:
         # Create an empty dictionary to store the metrics for each resource
@@ -101,7 +122,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
                 'E_CPU': float(ecpu),
                 'E_MEM': float(emem),
                 'E_GPU': float(egpu),
-                'E': float(ecpu + emem + egpu),
+                'E': float(ecpu) + float(emem) + float(egpu),
                 'I': float(i),
                 'M': float(m),
                 'SCI': float(((ecpu + emem + egpu) * i) + m)
