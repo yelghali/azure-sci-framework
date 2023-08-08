@@ -94,16 +94,25 @@ class AzureVM(AzureImpactNode):
                     timespan=timespan
                 )
                 
-                # Calculate the sum of memory usage in gigabytes, during the timespan
-                total_memory_usage = 0
+                # Calculate the total memory allocated to the virtual machine in bytes
+                total_memory_allocated = 4  #GB ; TODO: Fetch from VM SKU
+
+
+                # Calculate the average available memory in GB
+                average_consumed_memory_gb_items =  []
+                average_consumed_memory_gb_during_timespan = 0
                 for metric in memory_data.value:
                     for time_series in metric.timeseries:
                         for data in time_series.data:
                             if data.average is not None:
-                                total_memory_usage += data.average
+                                datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
+                                average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
 
-                total_memory_usage /= (1024 ** 3) # Convert from bytes to gigabytes
-                memory_utilization = total_memory_usage
+                average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
+                print(average_consumed_memory_gb_items)
+                print(average_consumed_memory_gb_during_timespan)
+                print(total_memory_allocated)
+                memory_utilization = average_consumed_memory_gb_during_timespan
                 #print(memory_utilization)
 
                 # Fetch GPU utilization (if available)

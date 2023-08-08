@@ -23,7 +23,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         pass
 
 
-    def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H'):
+    def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H', core_count=2):
         if tdp <= 0:
             raise ValueError("TDP must be a positive number")
         if cpu_utilization_during_timespan <= 0:
@@ -37,7 +37,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         power_consumption = tdp * tdp_coefficient
         duration = parse_duration(timespan)
         duartion_in_hours = float(duration.time.hours)
-        energy_consumption = power_consumption * duartion_in_hours / 1000 # W * H / 1000 = KWH
+        energy_consumption = core_count * (power_consumption * duartion_in_hours / 1000) # W * H / 1000 = KWH
         return energy_consumption
 
 
