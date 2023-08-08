@@ -49,7 +49,7 @@ aggregation = MetricAggregationType.AVERAGE
 
 #print(node.calculate())
 
-""""
+
 print(vm.fetch_resources())
 
 
@@ -99,4 +99,3 @@ request_json = {
     "interval": "PT15M",
     "timespan": "PT1H"
 }
-"""
