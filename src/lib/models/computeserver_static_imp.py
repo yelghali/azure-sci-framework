@@ -1,6 +1,9 @@
 from lib.ief.core import ImpactModelPluginInterface, SCIImpactMetricsInterface
 from typing import Dict, List
 
+from datetime import timedelta
+import re
+from isoduration import parse_duration
 
 class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def __init__(self):
@@ -19,17 +22,24 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def authenticate(self, auth_params: Dict[str, object]) -> None:
         pass
 
-    def calculate_ecpu(self, cpu_util) -> float:
-        if cpu_util is not None and 0 <= cpu_util <= 100:
-            # Calculate the power consumed by the CPU using the power curve model
-            pc = 0.7 * cpu_util + 0.3 * 205 # 205 W is the TDP of the processor
 
-            # Calculate the energy consumed by the CPU over the past hour
-            ecpu = pc * 3600 / 1000  # Convert from Ws to kWh
+    def calculate_ecpu(self, cpu_utilization, tdp=200, timespan='PT15M'):
+        if tdp <= 0:
+            raise ValueError("TDP must be a positive number")
+        if cpu_utilization <= 0:
+            tdp_coefficient = 0.12
+        elif cpu_utilization <= 10:
+            tdp_coefficient = 0.32
+        elif cpu_utilization <= 50:
+            tdp_coefficient = 0.75
+        else:
+            tdp_coefficient = 1.02
+        power_consumption = tdp * tdp_coefficient
+        duration = parse_duration(timespan)
+        duartion_in_hours = float(duration.time.hours)
+        energy_consumption = power_consumption * duartion_in_hours / 1000 # W * H / 1000 = KWH
+        return energy_consumption
 
-            return ecpu
-
-        return 0
 
     def calculate_emem(self, mem_util) -> float:
         if mem_util is not None and 0 <= mem_util <= 100:
