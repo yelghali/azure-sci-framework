@@ -4,6 +4,7 @@ from typing import Dict, List
 from datetime import timedelta
 import re
 from isoduration import parse_duration
+import warnings
 
 class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def __init__(self):
@@ -25,7 +26,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     #TODO : core_count variable
     def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H', core_count=2):
         if tdp <= 0 or core_count <= 0:
-            raise ValueError("TDP must be a positive number")
+            warnings.warn("TDP must be a positive number")
+            return 0
+        
         if cpu_utilization_during_timespan <= 0:
             tdp_coefficient = 0.12
         elif cpu_utilization_during_timespan <= 10:
@@ -43,7 +46,8 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
     def calculate_emem(self, ram_size_gb_during_timespan):
         if ram_size_gb_during_timespan <= 0:
-            raise ValueError("RAM size must be a positive number")
+            warnings.warn("RAM size must be a positive number")
+            return 0
 
         energy_per_gb = 0.38  # kWh per GB
 

@@ -42,14 +42,14 @@ node = AKSNode(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors
 
 aggregation = MetricAggregationType.AVERAGE
 
-#print(node)
-#node.fetch_resources()
+print(node)
+node.fetch_resources()
 
-#print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
+print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 
-#print(node.calculate())
+print(node.calculate())
 
-
+"""
 print(vm.fetch_resources())
 
 
@@ -99,3 +99,4 @@ request_json = {
     "interval": "PT15M",
     "timespan": "PT1H"
 }
+"""
