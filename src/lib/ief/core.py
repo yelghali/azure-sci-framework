@@ -246,16 +246,13 @@ class AttributedImpactNodeInterface(ABC):
         self.host_node = host_node
         self.name = name if name is not None else "attributedimpactnode"
 
-    #% util of the host node resources by the attributed node (CPU, RAM, GPU..)
-    def fetch_observations(self):
-        return self.observations
 
-    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity = 100) -> SCIImpactMetricsInterface:
+    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
         #return a SCIImpactMetricsInterface object
         
-        E_CPU = host_impact.E_CPU * observations.get("node_average_cpu_percentage_util_of_host_node", 0) / 100
-        E_MEM = host_impact.E_MEM * observations.get("node_average_memory_gb_util_of_host_node", 0) / 100
-        E_GPU = host_impact.E_GPU * observations.get("node_average_gpu_percentage_util_of_host_node", 0) / 100
+        E_CPU = host_impact.E_CPU * observations.get("node_host_cpu_util_percent", 0) / 100
+        E_MEM = host_impact.E_MEM * observations.get("node_host_memory_util_percent", 0) / 100
+        E_GPU = host_impact.E_GPU * observations.get("node_host_gpu_util_percent", 0) / 100
         E = E_CPU + E_MEM + E_GPU
         I = carbon_intensity
         M = host_impact.M #TODO : change this to be calculated from the host node
@@ -287,17 +284,17 @@ class AttributedImpactNodeInterface(ABC):
         )
         return toto
 
-    def calculate(self, carbon_intensity=100) -> SCIImpactMetricsInterface:
+    def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         if self.host_node is None:
             raise ValueError('Host node is not set')
         
         if self.observations is None:
             raise ValueError('Observations are not set')
         
-
+        self.host_node.fetch_resources()
+        self.host_node.fetch_observations(aggregation, interval="PT15M", timespan="PT1H")
         host_impact_dict = self.host_node.calculate(carbon_intensity=carbon_intensity)
         host_impact = list(host_impact_dict.values())[0]
-        observations = self.fetch_observations()
 
-        node_metric = self.attribute_impact_from_host_node(host_impact, observations, carbon_intensity=carbon_intensity)
+        node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity)
         return node_metric

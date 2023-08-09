@@ -38,9 +38,9 @@ metadata = {
 # print(vm.calculate())
 
 # manual_observations = {
-#     "node_average_cpu_percentage_util_of_host_node" : 50,
-#     "node_average_memory_util_of_host_node" : 50,
-#     "node_average_gpu_util_of_host_node" : 50,
+#     "node_host_cpu_util_percent" : 50,
+#     "node_host_memory_util_percent" : 50,
+#     "node_host_gpu_util_percent" : 50,
 # }
 
 # workload = AttributedImpactNodeInterface(name = "myworkload", 
@@ -64,12 +64,12 @@ node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbo
 
 aggregation = MetricAggregationType.AVERAGE
 
-print(node)
-node.fetch_resources()
+#print(node)
+#node.fetch_resources()
 
-print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
+#print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 
-print(node.calculate())
+#print(node.calculate())
 
 
 pod_resource_selectors = {
@@ -81,9 +81,11 @@ pod_resource_selectors = {
     "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
 }
 
-pod = AKSPod(name = "myakspod", model = None,  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
+pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
 
-print (pod.fetch_resources())
+print(pod.fetch_resources())
+print (pod.fetch_observations(interval="PT15M", timespan="PT1H"))
+print(pod.calculate())
 
 """
 print(vm.fetch_resources())

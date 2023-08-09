@@ -104,8 +104,10 @@ class AKSNode(AzureImpactNode):
                         if data.average is not None:
                             total_cpu_utilization += data.average
                             data_points += 1
-
-            average_cpu_utilization = total_cpu_utilization / data_points
+            if data_points > 0:
+                average_cpu_utilization = total_cpu_utilization / data_points
+            else:
+                average_cpu_utilization = 0
             cpu_utilization = average_cpu_utilization
             #print(cpu_utilization)
 
