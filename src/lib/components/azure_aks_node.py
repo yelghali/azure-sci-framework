@@ -54,16 +54,23 @@ class AKSNode(AzureImpactNode):
         current_cluster = current_context['context']['cluster']
 
         # Query the Kubernetes API server for the list of nodes in the cluster
-        nodes = api_client.list_node().items
+        if "nodepool_name" in self.resource_selectors:
+            nodepool_name = self.resource_selectors["nodepool_name"]
+            nodes = api_client.list_node(label_selector=f"nodepool.kubernetes.io/name={nodepool_name}").items
+        elif "node_name" in self.resource_selectors:
+            node_name = self.resource_selectors["node_name"]
+            nodes = api_client.list_node(label_selector=f"kubernetes.io/hostname={node_name}").items
+        else:
+            nodes = api_client.list_node().items
 
         # Get the names and metadata of all nodes in the cluster
-        node_info = {}
+        node_resources = {}
         for node in nodes:
             node_name = node.metadata.name
-            node_info[node_name] = node
+            node_resources[node_name] = node
 
-        self.resources = node_info
-        return node_info
+        self.resources = node_resources
+        return node_resources
 
     def fetch_observations(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
         subscription_id = self.resource_selectors.get("subscription_id", None)
