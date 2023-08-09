@@ -16,8 +16,8 @@ from azure.mgmt.containerservice import ContainerServiceClient
 from azure.identity import DefaultAzureCredential
 
 class AKSNode(AzureImpactNode):
-    def __init__(self, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
-        super().__init__(model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
+    def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
+        super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
         self.type = "aksnode"
         self.resources = {}
         self.observations = {}

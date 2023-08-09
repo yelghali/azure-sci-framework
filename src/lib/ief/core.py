@@ -26,8 +26,9 @@ class SCIImpactMetricsInterface(BaseModel):
     metadata: Dict[str, str] = {}
     observations: Dict[str, object] = {}
     components: List[Dict[str,'SCIImpactMetricsInterface']] = []
+    host_node : Dict[str, 'SCIImpactMetricsInterface'] = {}
 
-    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = []):
+    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = [], host_node : dict[str, 'SCIImpactMetricsInterface'] = {}):
         
 
         
@@ -44,7 +45,8 @@ class SCIImpactMetricsInterface(BaseModel):
             SCI=metrics.get('SCI'),
             metadata=metadata,
             observations=observations,
-            components=components_list
+            components=components_list,
+            host_node = host_node
             )
         # we want only the SCIMetricInterface
 
@@ -71,6 +73,9 @@ class ImpactModelPluginInterface(ABC):
         pass
 
 
+
+
+
 class CarbonIntensityPluginInterface(ABC):
     @abstractmethod
     def auth(self, auth_params: Dict[str, object]) -> None:
@@ -84,20 +89,21 @@ class CarbonIntensityPluginInterface(ABC):
     def get_current_carbon_intensity(self) -> float:
         pass
 
-class ImpactMetricInterface(ABC):
+
+""" class ImpactMetricInterface(ABC):
     def __init__(self, name: str, description: str, unit: str, metadata: Dict[str, object]):
         self.name = name
         self.description = description
         self.unit = unit
-        self.metadata = {}
+        self.metadata = {} """
 
 
 aggregation = MetricAggregationType.AVERAGE
 
 class ImpactNodeInterface(ABC):
-    def __init__(self, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}):
+    def __init__(self, name, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}):
         self.type = "impactnode"
-        self.name = "Undefined"
+        self.name = name if name is not None else "impactnode"
         self.inner_model = model
         self.carbon_intensity_provider = carbon_intensity_provider
         self.auth_object = auth_object
@@ -128,15 +134,12 @@ class ImpactNodeInterface(ABC):
         #using label selectors, fetch observation from cloud provider
         pass
 
-    @abstractmethod
     def lookup_static_params(self) -> Dict[str, object]:
         #lookup the static params for the model, corresponding to the fetched resources
         pass
 
     def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         self.fetch_resources()
-
-
         self.fetch_observations(aggregation = None, carbon_intensity=100, interval="PT15M", timespan="PT1H")
         return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity)
 
@@ -155,7 +158,7 @@ class AggregatedImpactNodesInterface(ABC):
         self.metadata = metadata
         self.inner_model = "sumofcomponents"
         self.type = type if type is not None else "aggregatedimpactnode"
-        self.name = name if name is not None else "undefined"
+        self.name = name if name is not None else "aggregatedimpactnode"
         self.carbon_intensity_provider = carbon_intensity_provider
         self.auth_object = auth_object
 
@@ -227,3 +230,74 @@ class AggregatedImpactNodesInterface(ABC):
             components_list=aggregated_components
         )
         return toto
+    
+
+class AttributedImpactNodeInterface(ABC):
+
+    def __init__(self, name, host_node : ImpactNodeInterface = None, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None):
+        self.type = "attributedimpactnode"
+        self.inner_model = "attributedimpactfromnode" #not using a model for now, using attribute_impact_from_host_node func
+        self.carbon_intensity_provider = carbon_intensity_provider
+        self.auth_object = auth_object
+        self.resource_selectors = resource_selectors
+        self.metadata = metadata
+        self.resources = None
+        self.observations = observations
+        self.host_node = host_node
+        self.name = name if name is not None else "attributedimpactnode"
+
+    #% util of the host node resources by the attributed node (CPU, RAM, GPU..)
+    def fetch_observations(self):
+        return self.observations
+
+    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity = 100) -> SCIImpactMetricsInterface:
+        #return a SCIImpactMetricsInterface object
+        
+        E_CPU = host_impact.E_CPU * observations.get("node_average_cpu_percentage_util_of_host_node", 0) / 100
+        E_MEM = host_impact.E_MEM * observations.get("node_average_memory_gb_util_of_host_node", 0) / 100
+        E_GPU = host_impact.E_GPU * observations.get("node_average_gpu_percentage_util_of_host_node", 0) / 100
+        E = E_CPU + E_MEM + E_GPU
+        I = carbon_intensity
+        M = host_impact.M #TODO : change this to be calculated from the host node
+        SCI = (E * I) + M
+
+        # Create a new SCIImpactMetricsInterface instance with the calculated metrics
+        attributed_metrics = {
+            'name' : self.name,
+            'type': self.type,
+            'model': self.inner_model,
+            'E_CPU': float(E_CPU),
+            'E_MEM': float(E_MEM),
+            'E_GPU': float(E_GPU),
+            'E': float(E),
+            'I': float(I),
+            'M': float(M),
+            'SCI': float(SCI)
+        }
+        metadata = {'attributed': "True", "host_node_name": self.host_node.name}
+        components = []
+
+        toto = {}
+        toto[self.name] = SCIImpactMetricsInterface(
+            metrics=attributed_metrics,
+            metadata=metadata,
+            observations=observations,
+            components_list=components,
+            host_node={self.host_node.name : host_impact}
+        )
+        return toto
+
+    def calculate(self, carbon_intensity=100) -> SCIImpactMetricsInterface:
+        if self.host_node is None:
+            raise ValueError('Host node is not set')
+        
+        if self.observations is None:
+            raise ValueError('Observations are not set')
+        
+
+        host_impact_dict = self.host_node.calculate(carbon_intensity=carbon_intensity)
+        host_impact = list(host_impact_dict.values())[0]
+        observations = self.fetch_observations()
+
+        node_metric = self.attribute_impact_from_host_node(host_impact, observations, carbon_intensity=carbon_intensity)
+        return node_metric

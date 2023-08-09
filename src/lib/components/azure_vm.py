@@ -8,8 +8,8 @@ from azure.mgmt.compute.models import VirtualMachine
 from azure.mgmt.monitor.models import MetricAggregationType
 
 class AzureVM(AzureImpactNode):
-    def __init__(self, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
-        super().__init__(model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
+    def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
+        super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
         self.type = "azurevm"
         self.resources = {}
         self.observations = {}
@@ -18,12 +18,12 @@ class AzureVM(AzureImpactNode):
         return ["D3V4"]
     
     def fetch_resources(self) -> Dict[str, VirtualMachine]:
+        print(self.resource_selectors)
         subscription_id = self.resource_selectors.get("subscription_id", None)
         resource_group = self.resource_selectors.get("resource_group", None) 
         name = self.resource_selectors.get("name", None) 
         tags = self.resource_selectors.get("tags", None) 
         vms = {}
-
         compute_client = ComputeManagementClient(self.credential, subscription_id)
 
         if name and resource_group:
@@ -81,7 +81,9 @@ class AzureVM(AzureImpactNode):
                                 total_cpu_utilization += data.average
                                 data_points += 1
 
-                average_cpu_utilization = total_cpu_utilization / data_points
+                if data_points > 0 :
+                    average_cpu_utilization = total_cpu_utilization / data_points
+                else : average_cpu_utilization = 0
                 cpu_utilization = average_cpu_utilization
                 #print(cpu_utilization)
     
@@ -108,7 +110,9 @@ class AzureVM(AzureImpactNode):
                                 datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
                                 average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
 
-                average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
+                if len(average_consumed_memory_gb_items) > 0 :
+                    average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
+                else : average_consumed_memory_gb_during_timespan = 0
                 memory_utilization = average_consumed_memory_gb_during_timespan
 
                 # Fetch GPU utilization (if available)

@@ -29,14 +29,17 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             warnings.warn("TDP must be a positive number")
             return 0
         
-        if cpu_utilization_during_timespan <= 0:
+        if cpu_utilization_during_timespan == 0:
+            tdp_coefficient = 0
+        elif cpu_utilization_during_timespan > 0 and cpu_utilization_during_timespan < 10:
             tdp_coefficient = 0.12
-        elif cpu_utilization_during_timespan <= 10:
+        elif cpu_utilization_during_timespan >= 10 and cpu_utilization_during_timespan < 50:
             tdp_coefficient = 0.32
-        elif cpu_utilization_during_timespan <= 50:
+        elif cpu_utilization_during_timespan >= 50 and cpu_utilization_during_timespan < 100:
             tdp_coefficient = 0.75
         else:
             tdp_coefficient = 1.02
+
         power_consumption = tdp * tdp_coefficient
         duration = parse_duration(timespan)
         duartion_in_hours = float(duration.time.hours)
@@ -60,14 +63,20 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def calculate_egpu(self, gpu_utilization_during_timespan, tdp=250, timespan='PT1H', gpu_count=2):
         if tdp <= 0 or gpu_count <= 0:
             raise ValueError("TDP must be a positive number")
-        if gpu_utilization_during_timespan <= 0:
+        
+
+        if gpu_utilization_during_timespan == 0:
+            tdp_coefficient = 0
+        elif gpu_utilization_during_timespan > 0 and gpu_utilization_during_timespan < 10:
             tdp_coefficient = 0.12
-        elif gpu_utilization_during_timespan <= 10:
+        elif gpu_utilization_during_timespan >= 10 and gpu_utilization_during_timespan < 50:
             tdp_coefficient = 0.32
-        elif gpu_utilization_during_timespan <= 50:
+        elif gpu_utilization_during_timespan >= 50 and gpu_utilization_during_timespan < 100:
             tdp_coefficient = 0.75
         else:
             tdp_coefficient = 1.02
+
+
         power_consumption = tdp * tdp_coefficient
         duration = parse_duration(timespan)
         duartion_in_hours = float(duration.time.hours)

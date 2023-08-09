@@ -6,6 +6,7 @@ import time
 sys.path.append('./lib')
 from lib.components.azure_vm import AzureVM
 from lib.components.azure_aks_node import AKSNode
+from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.MetricsExporter.exporter import MetricsExporter
 
@@ -25,29 +26,40 @@ metadata = {
     "region": "westeurope"
 }
 
-vm = AzureVM(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors=resource_selectors, metadata=metadata)
+vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=resource_selectors, metadata=metadata)
 
 print(vm.fetch_resources())
 print(vm.fetch_observations(interval="PT15M", timespan="PT1H"))
 print(vm.calculate())
 
-resource_selectors = {
-    "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
-    "resource_group": "sus-aks-lab",
-    "cluster_name": "sus-aks-lab",
-    "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
+observations = {
+    "node_average_cpu_percentage_util_of_host_node" : 50,
+    "node_average_memory_util_of_host_node" : 50,
+    "node_average_gpu_util_of_host_node" : 50,
 }
 
-node = AKSNode(ComputeServer_STATIC_IMP(), None, auth_params, resource_selectors=resource_selectors, metadata=metadata)
+workload = AttributedImpactNodeInterface(name = "myworkload", host_node=vm, carbon_intensity_provider=None, metadata=metadata, observations=observations)
+print(workload.calculate())
 
-aggregation = MetricAggregationType.AVERAGE
 
-print(node)
-node.fetch_resources()
 
-print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
+# resource_selectors = {
+#     "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+#     "resource_group": "sus-aks-lab",
+#     "cluster_name": "sus-aks-lab",
+#     "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
+# }
 
-print(node.calculate())
+# node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=resource_selectors, metadata=metadata)
+
+# aggregation = MetricAggregationType.AVERAGE
+
+# print(node)
+# node.fetch_resources()
+
+# print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
+
+# print(node.calculate())
 
 """
 print(vm.fetch_resources())

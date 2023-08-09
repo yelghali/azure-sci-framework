@@ -34,8 +34,7 @@ curl -X POST \
                 "your_metadata_key": "your_metadata_value"
             }
         },
-            
-        {
+                {
             "name": "batchprocessing",
             "auth_params": {
                 "your_auth_param_key": "your_auth_param_value"
@@ -51,6 +50,7 @@ curl -X POST \
                 "your_metadata_key": "your_metadata_value"
             }
         }
+
     ],
     "interval": "PT1M",
     "timespan": "PT1H"
