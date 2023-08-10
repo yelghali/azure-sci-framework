@@ -124,8 +124,8 @@ class AKSPod(AzureImpactNode):
             memory_utilization = {}
             gpu_utilization = {}
 
-            interval = '1m' # 1 minute interval
-            timespan = '5m' # 5 minute time range
+            interval = '5m' # 1 minute interval
+            timespan = '1h' # 5 minute time range
 
             # Define the Prometheus queries to get CPU utilization percentage, total RAM, and GPU utilization percentage by node
             #pod_node_cpu_usage = f'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{{node=~"{node_name}"}}) by (pod)'

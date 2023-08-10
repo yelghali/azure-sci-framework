@@ -90,12 +90,6 @@ class CarbonIntensityPluginInterface(ABC):
         pass
 
 
-""" class ImpactMetricInterface(ABC):
-    def __init__(self, name: str, description: str, unit: str, metadata: Dict[str, object]):
-        self.name = name
-        self.description = description
-        self.unit = unit
-        self.metadata = {} """
 
 
 aggregation = MetricAggregationType.AVERAGE
