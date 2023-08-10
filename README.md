@@ -1,6 +1,6 @@
 # Use cases
 * AS a developer, I want to estimate the carbon impact of my application (which uses several infrastructure components)
-* As a developer / admin, I want to be able 
+* As a developer / admin, I want to be able to see the carbon impact of my application over time (in dashboards)
 
 # TODO : complete readme 
 
