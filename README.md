@@ -7,3 +7,4 @@
 This project is an implementation of the Impact engine Framework, that provides : 
 * An API : to calculate carbon metrics of an application (ad-hoc)
 * A metrics exporter : which allows to build impact dashboards to help reduce carbon impact
+* A python implementation of the framework 
