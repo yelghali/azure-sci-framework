@@ -21,6 +21,7 @@ class AKSPod(AzureImpactNode):
         def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
             super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
             self.type = "akspod"
+            self.name = name
             self.resources = []
             self.observations = {}
             self.credential = DefaultAzureCredential()
@@ -222,17 +223,10 @@ class AKSPod(AzureImpactNode):
                     "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
                 }
                 node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=None, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
-                
+                node.fetch_resources()
+                node.fetch_observations(interval="PT15M", timespan="PT1H")
                 node_impact_metrics[node_name] = node
             
-            # calculate the Attributed impact of each pod based on its node impact and % util from observations
-            # workload = AttributedImpactNodeInterface(name = "myworkload", 
-                #                                          host_node=vm, 
-                #                                          carbon_intensity_provider=None, 
-                #                                          metadata=metadata, 
-                #                                          observations=manual_observations)
-                #print(workload.calculate())
-            print(node_impact_metrics[node_name].calculate())
 
             pods_impact = {}
             for pod in pod_list:
@@ -243,7 +237,7 @@ class AKSPod(AzureImpactNode):
                                                                     carbon_intensity_provider=None,
                                                                     metadata=self.metadata,
                                                                     observations=pod_observations[pod_name])
-                print(pod_impact_object.calculate())
-                pods_impact[pod_name] = pod_impact_object.calculate()
+                res = pod_impact_object.calculate() # get the impact metrics of the pod
+                pods_impact[pod_name] = res[pod_name]  or {} # get the impact metrics of the pod
 
             return pods_impact

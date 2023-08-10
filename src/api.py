@@ -13,6 +13,7 @@ import time
 sys.path.append('./lib')
 from lib.components.azure_vm import AzureVM
 from lib.components.azure_aks_node import AKSNode
+from lib.components.azure_aks_pod import AKSPod
 from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.MetricsExporter.exporter import MetricsExporter
@@ -45,12 +46,14 @@ async def get_metrics(request: AggregatedComponentRequest = Body(...)):
         print(component)
         # Create an instance of the appropriate subclass of ImpactNodeInterface
         if component.type == 'AzureVM':
-            node = AzureVM(ComputeServer_STATIC_IMP(), None, component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
+            node = AzureVM(name = component.name, model=ComputeServer_STATIC_IMP(), carbon_intensity_provider=None, auth_object=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
             components.append(node)
-
         elif component.type == 'AKSNode':
-            node = AKSNode(ComputeServer_STATIC_IMP(), None, component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
+            node = AKSNode(name = component.name, model = ComputeServer_STATIC_IMP(), carbon_intensity_provider=None, auth=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
             components.append(node)
+        elif component.type == 'AKSPod':
+            pod = AKSPod(name = component.name, model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
+            components.append(pod)
         else:
             continue
 
