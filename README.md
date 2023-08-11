@@ -100,7 +100,62 @@ curl -X POST \
 		"host_node": {}
 	}
 }
-```
+// <!-- ``` -->
+
+
+## example of code to get emissions of a "shared VM" based App
+
+
+In this example, our app e-shop, has a **shared** VM, and we want to get the carbon impact of the application over the last 24 hour (timespan).
+
+```python
+
+auth_params = {
+}
+
+resource_selectors = {
+    "subscription_id": "<SUB>",
+    "resource_group": "<RG>",
+    "name": "<VMName>",
+}
+
+metadata = {
+    "region": "westeurope"
+}
+
+timespan = "PT24H"
+interval = "PT5M"
+
+vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  
+             carbon_intensity_provider=None, 
+             auth_object=auth_params, 
+             resource_selectors=resource_selectors, 
+             metadata=metadata,
+             timespan=timespan,
+             interval=interval)
+
+#print(vm.fetch_resources())
+#print(vm.fetch_observations())
+print(vm.calculate())
+
+manual_observations = {
+     "node_host_cpu_util_percent" : 50,
+     "node_host_memory_util_percent" : 50,
+     "node_host_gpu_util_percent" : 50
+ }
+
+workload = AttributedImpactNodeInterface(name = "myworkload", 
+                                          host_node=vm, 
+                                          carbon_intensity_provider=None, 
+                                          metadata=metadata, 
+                                          observations=manual_observations,
+                                          timespan=timespan,
+                                          interval=interval)
+print(workload.calculate())
+    
+    ```
+
+
 
 ## example of an API call to get emissions of a Kubernetes based App
 
