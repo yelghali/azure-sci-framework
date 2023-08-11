@@ -53,6 +53,6 @@ curl -X POST \
         }
 
     ],
-    "interval": "PT15M",
-    "timespan": "PT1H"
+    "interval": "PT5M",
+    "timespan": "PT24H"
 }'
