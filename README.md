@@ -157,7 +157,7 @@ print(workload.calculate())
 
 
 ### response (Json of objects)
-```json
+```python
 {
 	'myworkload': SCIImpactMetricsInterface(name = 'myworkload', unit = 'severalUnits', type = 'attributedimpactnode', model = 'attributedimpactfromnode', description = 'Description of SCI Impact Metrics', timespan = 'PT24H', interval = 'PT5M', E_CPU = 0.576, E_MEM = 0.31337428009815704, E_GPU = 0.0, E = 0.889374280098157, I = 100.0, M = 4.280821917808219e-05, SCI = 88.93747081803488, metadata = {
 		'attributed': 'True',
