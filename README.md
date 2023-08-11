@@ -60,8 +60,8 @@ curl -X POST \
         }
 
     ],
-    "interval": "PT5M",
-    "timespan": "PT24H"
+    "interval": "PT5M", # to normlize or homogenize the metrics collected from different sources ; this is a technical parameter ; TODO : remove from query
+    "timespan": "PT24H" # the R of SCI equation (time span)
 }'
 ```	
 
