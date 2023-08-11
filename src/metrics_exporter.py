@@ -57,7 +57,7 @@ print(workload.calculate())
 
 
 # resource_selectors = {
-#     "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+#     "subscription_id": "",
 #     "resource_group": "sus-aks-lab",
 #     "cluster_name": "sus-aks-lab",
 #     "node_name" : "aks-agentpool-23035252-vmss000005",
@@ -77,7 +77,7 @@ print(workload.calculate())
 
 
 # pod_resource_selectors = {
-#     "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+#     "subscription_id": "",
 #     "resource_group": "sus-aks-lab",
 #     "cluster_name": "sus-aks-lab",
 #     #"labels" : {"name" : "keda-operator"},
@@ -95,17 +95,12 @@ print(workload.calculate())
 print(vm.fetch_resources())
 
 
-data = {
-    "metric_1": 1.23,
-    "metric_2": 4.56,
-    "metric_3": 7.89
-}
 
 #static method
 MetricsExporter.start_http_server(port=8000)
 while(True):
 
-    vm.fetch_observations(aggregation=aggregation, interval="PT15M", timespan="PT1H")
+    vm.fetch_observations()
     print(vm.observations)
     data = vm.calculate()
     print(data)
@@ -120,25 +115,4 @@ while(True):
 
 
 
-request_json = {
-    "app_name": "toto",
-    "components": [
-        {
-            "type": "AzureVM",
-            "resource_selectors": {
-                "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
-                "resource_group": "webapprename",
-                "name": "tototatar"
-            }
-        },
-        {
-            "type": "AKSNode",
-            "resource_selectors": {
-                ...
-            }
-        }
-    ],
-    "interval": "PT15M",
-    "timespan": "PT1H"
-}
 """
