@@ -152,8 +152,7 @@ workload = AttributedImpactNodeInterface(name = "myworkload",
                                           timespan=timespan,
                                           interval=interval)
 print(workload.calculate())
-    
-    ```
+```
 
 
 
