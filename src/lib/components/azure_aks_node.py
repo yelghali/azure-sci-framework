@@ -157,7 +157,9 @@ class AKSNode(AzureImpactNode):
  
 
     def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, metadata=self.metadata)
+        self.fetch_resources()
+        self.fetch_observations()
+        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, interval=self.interval, timespan=self.timespan, metadata=self.metadata)
 
     def lookup_static_params(self) -> Dict[str, Any]:
         return {}

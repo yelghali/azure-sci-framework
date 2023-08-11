@@ -7,7 +7,6 @@ curl -X POST \
         {
             "name": "webserver",
             "auth_params": {
-                "your_auth_param_key": "your_auth_param_value"
             },
             "type": "AzureVM",
             "resource_selectors": {
@@ -18,12 +17,11 @@ curl -X POST \
             "metadata": {
                 "your_metadata_key": "your_metadata_value"
             }
-        },
-               
+        }        
 
     ],
     "interval": "PT1M",
-    "timespan": "PT1H"
+    "timespan": "PT24H"
 }'
 
 
@@ -55,6 +53,6 @@ curl -X POST \
         }
 
     ],
-    "interval": "PT1M",
+    "interval": "PT15M",
     "timespan": "PT1H"
 }'

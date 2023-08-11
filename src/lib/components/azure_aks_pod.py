@@ -48,13 +48,13 @@ class AKSPod(AzureImpactNode):
             return token.token
 
 
-        def query_prometheus(self, prometheus_endpoint: str, query: str, timespan: str, interval: str) -> Dict[str, Any]:
+        def query_prometheus(self, prometheus_endpoint: str, query: str,  interval: str, timespan: str) -> Dict[str, Any]:
             url = f"{prometheus_endpoint}/api/v1/query"
             params = {
                 "query": query,
-                #"start": f"now()-{timespan}",
-                #"end": "now()",
-                #"step": interval
+                "start": f"now()-{timespan}",
+                "end": "now()",
+                "step": interval
             }
 
             params = {"query" : query}
@@ -118,8 +118,8 @@ class AKSPod(AzureImpactNode):
             pod_list = self.resources
 
 
-            span = '1h' # 1 hour time range
-            interval = '5m' # 5 minute interval
+            timespan = self.timespan.lower().replace("pt", "")
+            interval = self.interval.lower().replace("pt", "")
  
             observations = {}   
 
@@ -127,8 +127,6 @@ class AKSPod(AzureImpactNode):
             memory_utilization = {}
             gpu_utilization = {}
 
-            interval = '5m' # 1 minute interval
-            timespan = '1h' # 5 minute time range
 
             # Define the Prometheus queries to get CPU utilization percentage, total RAM, and GPU utilization percentage by node
             #pod_node_cpu_usage = f'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{{node=~"{node_name}"}}) by (pod)'
@@ -226,8 +224,8 @@ class AKSPod(AzureImpactNode):
                     "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
                 }
                 node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=None, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
-                node.fetch_resources()
-                node.fetch_observations(interval="PT15M", timespan="PT1H")
+                #node.fetch_resources()
+                #node.fetch_observations()
                 node_impact_metrics[node_name] = node
             
 
