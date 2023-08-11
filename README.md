@@ -9,3 +9,190 @@ This project is an implementation of the Impact engine Framework, that provides 
 * A metrics exporter : which allows to build impact dashboards to help reduce carbon impact
 * A python implementation of the framework 
 * An SCI model for compute server, based on the SCI study case : https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md
+
+
+## example of an API call to get emissions of a VM based App
+
+
+## example of an API call to get emissions of a Kubernetes based App
+
+In this example, our App is deployed on an AKS cluster, and we want to get the carbon impact of the application over the last 24 hour (timespan).
+
+we define resource selectors to select the resources we want to get the carbon impact of. In this case, we want to get the carbon impact of the keda namespace, which contains the keda operator and the keda metrics server.
+
+we also define the prometheus endpoint, which is the endpoint of the prometheus server that is used by the keda metrics server to get metrics from the cluster.
+
+Our App is composed in this case of 2 pods, each pod running on a node (could be same node, or different one) 
+
+The Imapct of a pod, is deducated from the impact of the node it is running on. (attribution pattern) ; and we use % pod utl of node resouces ( average % CPU, % of memory and % of GPU) -> during the timespan defined by the query
+
+### query
+
+
+curl -X POST \
+  http://localhost:8000/metrics \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "app_name": "e-shop",
+    "components": [
+                {
+            "name": "batchprocessing",
+            "auth_params": {
+                "key": "value"
+            },
+            "type": "AKSPod",
+            "resource_selectors": {
+                "subscription_id": "<SUB>",
+                "resource_group": "<RG>",
+                "cluster_name": "<cluster>",
+                "namespace": "keda", 
+                "prometheus_endpoint": "<Prom endpoint>"
+                },
+            "metadata": {
+                "your_metadata_key": "your_metadata_value"
+            }
+        }
+
+    ],
+    "interval": "PT5M",
+    "timespan": "PT24H"
+}'
+
+### response
+```json
+
+{
+	"e-shop": {
+		"name": "e-shop",
+		"unit": "severalUnits",
+		"type": "aggregatedimpactnode",
+		"model": "sumofcomponents",
+		"description": "Description of SCI Impact Metrics",
+		"timespan": "PT24H",
+		"interval": "PT5M",
+		"E_CPU": 1.0295646315789783e-05,
+		"E_MEM": 0.0,
+		"E_GPU": 0.0,
+		"E": 1.0295646315789783e-05,
+		"I": 100.0,
+		"M": 3.567351598173516e-06,
+		"SCI": 0.0010331319831771517,
+		"metadata": {
+			"aggregated": "True"
+		},
+		"observations": {},
+		"components": [{
+			"keda-metrics-apiserver-5bcc58d658-mxqh7": {
+				"name": "keda-metrics-apiserver-5bcc58d658-mxqh7",
+				"unit": "severalUnits",
+				"type": "attributedimpactnode",
+				"model": "attributedimpactfromnode",
+				"description": "Description of SCI Impact Metrics",
+				"timespan": "PT1H",
+				"interval": "PT5M",
+				"E_CPU": 7.680000000002207e-06,
+				"E_MEM": 0.0,
+				"E_GPU": 0.0,
+				"E": 7.680000000002207e-06,
+				"I": 100.0,
+				"M": 1.783675799086758e-06,
+				"SCI": 0.0007697836757993074,
+				"metadata": {
+					"attributed": "True",
+					"host_node_name": "aks-agentpool-23035252-vmss000005"
+				},
+				"observations": {
+					"node_host_cpu_util_percent": 0.006000000000001724,
+					"node_host_memory_util_percent": 0.046112060546875,
+					"node_host_gpu_util_percent": 0
+				},
+				"components": [],
+				"host_node": {
+					"aks-agentpool-23035252-vmss000005": {
+						"name": "aks-agentpool-23035252-vmss000005",
+						"unit": "severalUnits",
+						"type": "azurevm",
+						"model": "computeserver_static_imp",
+						"description": "Description of SCI Impact Metrics",
+						"timespan": "PT1H",
+						"interval": "PT5M",
+						"E_CPU": 0.128,
+						"E_MEM": 0.0,
+						"E_GPU": 0.0,
+						"E": 0.128,
+						"I": 100.0,
+						"M": 1.783675799086758e-06,
+						"SCI": 12.8000017836758,
+						"metadata": {
+							"resource_name": "aks-agentpool-23035252-vmss000005"
+						},
+						"observations": {
+							"average_cpu_percentage": 12.436124999999999,
+							"average_memory_gb": 0,
+							"average_gpu_percentage": 0
+						},
+						"components": [],
+						"host_node": {}
+					}
+				}
+			},
+			"keda-operator-778fb74497-m55gs": {
+				"name": "keda-operator-778fb74497-m55gs",
+				"unit": "severalUnits",
+				"type": "attributedimpactnode",
+				"model": "attributedimpactfromnode",
+				"description": "Description of SCI Impact Metrics",
+				"timespan": "PT1H",
+				"interval": "PT5M",
+				"E_CPU": 2.615646315787576e-06,
+				"E_MEM": 0.0,
+				"E_GPU": 0.0,
+				"E": 2.615646315787576e-06,
+				"I": 100.0,
+				"M": 1.783675799086758e-06,
+				"SCI": 0.00026334830737784437,
+				"metadata": {
+					"attributed": "True",
+					"host_node_name": "aks-agentpool-23035252-vmss000005"
+				},
+				"observations": {
+					"node_host_cpu_util_percent": 0.0020434736842090437,
+					"node_host_memory_util_percent": 0.038562774658203125,
+					"node_host_gpu_util_percent": 0
+				},
+				"components": [],
+				"host_node": {
+					"aks-agentpool-23035252-vmss000005": {
+						"name": "aks-agentpool-23035252-vmss000005",
+						"unit": "severalUnits",
+						"type": "azurevm",
+						"model": "computeserver_static_imp",
+						"description": "Description of SCI Impact Metrics",
+						"timespan": "PT1H",
+						"interval": "PT5M",
+						"E_CPU": 0.128,
+						"E_MEM": 0.0,
+						"E_GPU": 0.0,
+						"E": 0.128,
+						"I": 100.0,
+						"M": 1.783675799086758e-06,
+						"SCI": 12.8000017836758,
+						"metadata": {
+							"resource_name": "aks-agentpool-23035252-vmss000005"
+						},
+						"observations": {
+							"average_cpu_percentage": 12.436124999999999,
+							"average_memory_gb": 0,
+							"average_gpu_percentage": 0
+						},
+						"components": [],
+						"host_node": {}
+					}
+				}
+			}
+		}],
+		"host_node": {}
+	}
+}
+
+```
