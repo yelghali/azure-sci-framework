@@ -100,7 +100,7 @@ curl -X POST \
 		"host_node": {}
 	}
 }
-// <!-- ``` -->
+```
 
 
 ## example of code to get emissions of a "shared VM" based App
