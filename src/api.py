@@ -46,13 +46,13 @@ async def get_metrics(request: AggregatedComponentRequest = Body(...)):
         print(component)
         # Create an instance of the appropriate subclass of ImpactNodeInterface
         if component.type == 'AzureVM':
-            node = AzureVM(name = component.name, model=ComputeServer_STATIC_IMP(), carbon_intensity_provider=None, auth_object=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
+            node = AzureVM(name = component.name, model=ComputeServer_STATIC_IMP(), carbon_intensity_provider=None, auth_object=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata, interval=request.interval, timespan=request.timespan)
             components.append(node)
         elif component.type == 'AKSNode':
-            node = AKSNode(name = component.name, model = ComputeServer_STATIC_IMP(), carbon_intensity_provider=None, auth=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
+            node = AKSNode(name = component.name, model = ComputeServer_STATIC_IMP(), carbon_intensity_provider=None, auth=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata, interval=request.interval, timespan=request.timespan)
             components.append(node)
         elif component.type == 'AKSPod':
-            pod = AKSPod(name = component.name, model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata)
+            pod = AKSPod(name = component.name, model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=component.auth_params, resource_selectors=component.resource_selectors, metadata=component.metadata, interval=request.interval, timespan=request.timespan)
             components.append(pod)
         else:
             continue
@@ -60,7 +60,9 @@ async def get_metrics(request: AggregatedComponentRequest = Body(...)):
     # Create an instance of the AggregatedImpactNodesInterface class for the aggregated component
     aggregated_component = AggregatedImpactNodesInterface(
         name=request.app_name,
-        components=components
+        components=components,
+        timespan=request.timespan,
+        interval=request.interval
     )
 
     # Calculate the metrics for the aggregated component and its child components

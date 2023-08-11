@@ -16,6 +16,7 @@ class SCIImpactMetricsInterface(BaseModel):
     model: str = "SCI Impact Model"
     description: str = "Description of SCI Impact Metrics"
     timespan: str 
+    interval: str
     E_CPU: float
     E_MEM: float
     E_GPU: float
@@ -48,7 +49,8 @@ class SCIImpactMetricsInterface(BaseModel):
             observations=observations,
             components=components_list,
             host_node = host_node,
-            timespan = metrics.get('timespan', "PT1H")
+            timespan = metrics.get('timespan', "PT1H"),
+            interval = metrics.get('interval', "PT5M")
             )
         # we want only the SCIMetricInterface
 
@@ -71,7 +73,7 @@ class ImpactModelPluginInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100, timespan : str = "PT1H", metadata : dict [str, str] = {}) -> Dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100, interval : str = "PT5M", timespan : str = "PT1H", metadata : dict [str, str] = {}) -> Dict[str, SCIImpactMetricsInterface]:
         pass
 
 
@@ -110,13 +112,13 @@ class ImpactNodeInterface(ABC):
         self.interval = interval
         self.timespan = timespan
 
-    def run(self) -> Dict[str, object]:
-        self.authenticate(self.auth_object.get_auth_params())
-        self.resources = self.fetch_resources()
-        self.static_params = self.lookup_static_params()
-        self.configure(self.name, self.static_params)
-        self.observations = self.fetch_observation()
-        return self.calculate(self.observations)
+    # def run(self) -> Dict[str, object]:
+    #     self.authenticate(self.auth_object.get_auth_params())
+    #     self.resources = self.fetch_resources()
+    #     self.static_params = self.lookup_static_params()
+    #     self.configure(self.name, self.static_params)
+    #     self.observations = self.fetch_observation()
+    #     return self.calculate(self.observations)
 
     @abstractmethod
     def authenticate(self, auth_params: Dict[str, object]) -> None:
@@ -139,7 +141,7 @@ class ImpactNodeInterface(ABC):
     def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         self.fetch_resources()
         self.fetch_observations()
-        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, metadata=self.metadata)
+        return self.inner_model.calculate(observations=self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, interval= self.interval, metadata=self.metadata)
 
     def model_identifier(self) -> str:
         return self.inner_model.model_identifier()
@@ -215,6 +217,7 @@ class AggregatedImpactNodesInterface(ABC):
             'name': self.name,
             'model': self.inner_model,
             'timespan' : self.timespan,
+            'interval' : self.interval,
             'E_CPU': float(E_CPU),
             'E_MEM': float(E_MEM),
             'E_GPU': float(E_GPU),
@@ -272,6 +275,7 @@ class AttributedImpactNodeInterface(ABC):
             'type': self.type,
             'model': self.inner_model,
             'timespan' : self.timespan,
+            'interval' : self.interval,
             'E_CPU': float(E_CPU),
             'E_MEM': float(E_MEM),
             'E_GPU': float(E_GPU),

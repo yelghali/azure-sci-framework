@@ -109,7 +109,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return m
 
-    def calculate(self, observations, carbon_intensity: float = 100, timespan : str = "PT1H", metadata : dict [str, str] = {}) -> dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, observations, carbon_intensity: float = 100, timespan : str = "PT1H", interval = 'PT5M', metadata : dict [str, str] = {}) -> dict[str, SCIImpactMetricsInterface]:
         # Create an empty dictionary to store the metrics for each resource
         resource_metrics = {}
 
@@ -135,6 +135,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
                 'name': resource_name,
                 'model': self.name,
                 'timespan' : timespan,
+                'interval' : interval,
                 'E_CPU': float(ecpu),
                 'E_MEM': float(emem),
                 'E_GPU': float(egpu),

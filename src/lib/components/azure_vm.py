@@ -162,7 +162,7 @@ class AzureVM(AzureImpactNode):
     def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
         self.fetch_resources()
         self.fetch_observations()
-        return self.inner_model.calculate(self.observations, carbon_intensity=100, timespan=self.timespan, metadata=self.metadata)
+        return self.inner_model.calculate(self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata)
 
     def lookup_static_params(self) -> Dict[str, object]:
         return {}
