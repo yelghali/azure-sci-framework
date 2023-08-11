@@ -13,6 +13,94 @@ This project is an implementation of the Impact engine Framework, that provides 
 
 ## example of an API call to get emissions of a VM based App
 
+In this example, our app e-shop, has a **dedicated** VM, and we want to get the carbon impact of the application over the last 24 hour (timespan).
+
+so SCI of e-shop App = SCI of VM (because the VM is not shared with other apps)
+
+### response
+```bash
+
+curl -X POST \
+  http://localhost:8000/metrics \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "app_name": "e-shop",
+    "components": [
+        {
+            "name": "webserver",
+            "auth_params": {
+            },
+            "type": "AzureVM",
+            "resource_selectors": {
+                "subscription_id": "<SUbID>",
+                "resource_group": "<RGName>",
+                "name": "tototatar"
+            },
+            "metadata": {
+                "your_metadata_key": "your_metadata_value"
+            }
+        }        
+
+    ],
+    "interval": "PT1M", # to normlize or homogenize the metrics collected from different sources ; this is a technical parameter ; TODO : remove from query
+    "timespan": "PT24H"  # the R of SCI equation (time span)
+}'
+```
+
+### response
+```json
+{
+	"e-shop": {
+		"name": "e-shop",
+		"unit": "severalUnits",
+		"type": "aggregatedimpactnode",
+		"model": "sumofcomponents",
+		"description": "Description of SCI Impact Metrics",
+		"timespan": "PT24H",
+		"interval": "PT1M",
+		"E_CPU": 1.152,
+		"E_MEM": 0.6218425726807492,
+		"E_GPU": 0.0,
+		"E": 1.7738425726807492,
+		"I": 100.0,
+		"M": 4.280821917808219e-05,
+		"SCI": 177.3843000762941,
+		"metadata": {
+			"aggregated": "True"
+		},
+		"observations": {},
+		"components": [{
+			"tototatar": {
+				"name": "tototatar",
+				"unit": "severalUnits",
+				"type": "azurevm",
+				"model": "computeserver_static_imp",
+				"description": "Description of SCI Impact Metrics",
+				"timespan": "PT24H",
+				"interval": "PT1M",
+				"E_CPU": 1.152,
+				"E_MEM": 0.6218425726807492,
+				"E_GPU": 0.0,
+				"E": 1.7738425726807492,
+				"I": 100.0,
+				"M": 4.280821917808219e-05,
+				"SCI": 177.3843000762941,
+				"metadata": {
+					"resource_name": "tototatar"
+				},
+				"observations": {
+					"average_cpu_percentage": 2.4472038327526153,
+					"average_memory_gb": 1.6364278228440767,
+					"average_gpu_percentage": 0
+				},
+				"components": [],
+				"host_node": {}
+			}
+		}],
+		"host_node": {}
+	}
+}
+```json
 
 ## example of an API call to get emissions of a Kubernetes based App
 
@@ -60,7 +148,7 @@ curl -X POST \
         }
 
     ],
-    "interval": "PT5M", # to normlize or homogenize the metrics collected from different sources ; this is a technical parameter ; TODO : remove from query
+    "interval": "PT5M", # to normlize or homogenize the metrics collected from different sources ; this is a technical parameter ; 
     "timespan": "PT24H" # the R of SCI equation (time span)
 }'
 ```	
