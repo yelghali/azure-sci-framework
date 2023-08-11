@@ -15,6 +15,7 @@ class SCIImpactMetricsInterface(BaseModel):
     type: str = "impactnode"
     model: str = "SCI Impact Model"
     description: str = "Description of SCI Impact Metrics"
+    timespan: str 
     E_CPU: float
     E_MEM: float
     E_GPU: float
@@ -46,7 +47,8 @@ class SCIImpactMetricsInterface(BaseModel):
             metadata=metadata,
             observations=observations,
             components=components_list,
-            host_node = host_node
+            host_node = host_node,
+            timespan = metrics.get('timespan', "PT1H")
             )
         # we want only the SCIMetricInterface
 
@@ -69,7 +71,7 @@ class ImpactModelPluginInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100, timespan : str = "PT1H", metadata : dict [str, str] = {}) -> Dict[str, SCIImpactMetricsInterface]:
         pass
 
 
@@ -95,7 +97,7 @@ class CarbonIntensityPluginInterface(ABC):
 aggregation = MetricAggregationType.AVERAGE
 
 class ImpactNodeInterface(ABC):
-    def __init__(self, name, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}):
+    def __init__(self, name, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, interval : str = "PT5M", timespan : str = "PT1H"):
         self.type = "impactnode"
         self.name = name if name is not None else "impactnode"
         self.inner_model = model
@@ -105,6 +107,8 @@ class ImpactNodeInterface(ABC):
         self.metadata = metadata
         self.resources = None
         self.observations = None
+        self.interval = interval
+        self.timespan = timespan
 
     def run(self) -> Dict[str, object]:
         self.authenticate(self.auth_object.get_auth_params())
@@ -134,8 +138,8 @@ class ImpactNodeInterface(ABC):
 
     def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         self.fetch_resources()
-        self.fetch_observations(aggregation = None, carbon_intensity=100, interval="PT15M", timespan="PT1H")
-        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity)
+        self.fetch_observations()
+        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, metadata=self.metadata)
 
     def model_identifier(self) -> str:
         return self.inner_model.model_identifier()
@@ -146,7 +150,7 @@ class ImpactNodeInterface(ABC):
 
 
 class AggregatedImpactNodesInterface(ABC):
-    def __init__(self, name, components : List[ImpactNodeInterface], carbon_intensity_provider: CarbonIntensityPluginInterface = None, type=None, model=None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {} ):
+    def __init__(self, name, components : List[ImpactNodeInterface], carbon_intensity_provider: CarbonIntensityPluginInterface = None, type=None, model=None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, interval : str = "PT5M", timespan : str = "PT1H" ):
         self.components = components  
         self.resource_selectors = resource_selectors
         self.metadata = metadata
@@ -155,6 +159,8 @@ class AggregatedImpactNodesInterface(ABC):
         self.name = name if name is not None else "aggregatedimpactnode"
         self.carbon_intensity_provider = carbon_intensity_provider
         self.auth_object = auth_object
+        self.interval = interval
+        self.timespan = timespan
 
 
     def authenticate(self, auth_params: Dict[str, object]) -> None:
@@ -181,8 +187,13 @@ class AggregatedImpactNodesInterface(ABC):
         for component in self.components:
             print (component)
             component.fetch_resources()
-            component.fetch_observations(aggregation, interval="PT15M", timespan="PT1H")
+            
+            component.interval = self.interval
+            component.timespan = self.timespan
+            component.fetch_observations()
+
             impact_metrics = component.calculate(carbon_intensity=carbon_intensity)
+
             node_metrics.append(impact_metrics)
             for node_name, node_impact_metric in impact_metrics.items():
             # store the component in the dict
@@ -203,6 +214,7 @@ class AggregatedImpactNodesInterface(ABC):
             'type': self.type,
             'name': self.name,
             'model': self.inner_model,
+            'timespan' : self.timespan,
             'E_CPU': float(E_CPU),
             'E_MEM': float(E_MEM),
             'E_GPU': float(E_GPU),
@@ -228,7 +240,7 @@ class AggregatedImpactNodesInterface(ABC):
 
 class AttributedImpactNodeInterface(ABC):
 
-    def __init__(self, name, host_node : ImpactNodeInterface = None, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None):
+    def __init__(self, name, host_node : ImpactNodeInterface = None, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None, interval : str = "PT5M", timespan : str = "PT1H"):
         self.type = "attributedimpactnode"
         self.inner_model = "attributedimpactfromnode" #not using a model for now, using attribute_impact_from_host_node func
         self.carbon_intensity_provider = carbon_intensity_provider
@@ -239,6 +251,8 @@ class AttributedImpactNodeInterface(ABC):
         self.observations = observations
         self.host_node = host_node
         self.name = name if name is not None else "attributedimpactnode"
+        self.interval = interval
+        self.timespan = timespan
 
 
     def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
@@ -257,6 +271,7 @@ class AttributedImpactNodeInterface(ABC):
             'name' : self.name,
             'type': self.type,
             'model': self.inner_model,
+            'timespan' : self.timespan,
             'E_CPU': float(E_CPU),
             'E_MEM': float(E_MEM),
             'E_GPU': float(E_GPU),
@@ -286,8 +301,13 @@ class AttributedImpactNodeInterface(ABC):
             raise ValueError('Observations are not set')
         
         self.host_node.fetch_resources()
-        self.host_node.fetch_observations(aggregation, interval="PT15M", timespan="PT1H")
+
+        self.host_node.interval = self.interval
+        self.host_node.timespan = self.timespan
+        self.host_node.fetch_observations()
+
         host_impact_dict = self.host_node.calculate(carbon_intensity=carbon_intensity)
+
         host_impact = list(host_impact_dict.values())[0]
 
         node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity)

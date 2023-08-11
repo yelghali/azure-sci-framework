@@ -29,6 +29,8 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             warnings.warn("TDP must be a positive number")
             return 0
         
+        print (timespan)
+        print("##############################################")
         if cpu_utilization_during_timespan == 0:
             tdp_coefficient = 0
         elif cpu_utilization_during_timespan > 0 and cpu_utilization_during_timespan < 10:
@@ -107,7 +109,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return m
 
-    def calculate(self, observations, carbon_intensity: float = 100, metadata : dict [str, str] = {}) -> dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, observations, carbon_intensity: float = 100, timespan : str = "PT1H", metadata : dict [str, str] = {}) -> dict[str, SCIImpactMetricsInterface]:
         # Create an empty dictionary to store the metrics for each resource
         resource_metrics = {}
 
@@ -119,19 +121,20 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             gpu_util = resource_observations.get("average_gpu_percentage", 0)
 
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
-            ecpu = self.calculate_ecpu(cpu_util)
-            emem = self.calculate_emem(mem_util)
-            egpu = self.calculate_egpu(gpu_util)
+            ecpu = self.calculate_ecpu(cpu_util, timespan=timespan)
+            emem = self.calculate_emem(mem_util) #memory model uses only the average memory utilization in GB (calculated for the given timespan))
+            egpu = self.calculate_egpu(gpu_util, timespan=timespan)
 
             # Calculate the M and SCI metrics
             i = carbon_intensity
-            m = self.calculate_m()
+            m = self.calculate_m(timespan=timespan)
 
             # Create a dictionary with the metric names and values for this resource
             impact_metrics = {
                 'type': 'azurevm',
                 'name': resource_name,
                 'model': self.name,
+                'timespan' : timespan,
                 'E_CPU': float(ecpu),
                 'E_MEM': float(emem),
                 'E_GPU': float(egpu),

@@ -17,9 +17,12 @@ from azure.mgmt.monitor.models import MetricAggregationType
 from azure.mgmt.containerservice import ContainerServiceClient
 from azure.identity import DefaultAzureCredential
 
+aggregation = MetricAggregationType.AVERAGE #for monitoring queries
+
+
 class AKSPod(AzureImpactNode):
-        def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
-            super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
+        def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
+            super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan)
             self.type = "akspod"
             self.name = name
             self.resources = []

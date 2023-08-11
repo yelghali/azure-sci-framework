@@ -7,9 +7,13 @@ from azure.mgmt.compute.models import VirtualMachine
 
 from azure.mgmt.monitor.models import MetricAggregationType
 
+
+aggregation = MetricAggregationType.AVERAGE #for monitoring queries
+
+
 class AzureVM(AzureImpactNode):
-    def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
-        super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
+    def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
+        super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan)
         self.type = "azurevm"
         self.resources = {}
         self.observations = {}
@@ -40,9 +44,9 @@ class AzureVM(AzureImpactNode):
         self.resources = vms
         return self.resources
 
-    aggregation = MetricAggregationType.AVERAGE
 
-    def fetch_observations(self, aggregation: str = aggregation, timespan : str = "PT1H", interval: str = "PT15M") -> Dict[str, object]:
+    #def fetch_observations(self, aggregation: str = aggregation, timespan : str = "PT1H", interval: str = "PT15M") -> Dict[str, object]:
+    def fetch_observations(self) -> Dict[str, object]:
         """
         Fetches a dictionary of metric observations from Azure Monitor.
 
@@ -67,8 +71,8 @@ class AzureVM(AzureImpactNode):
                     resource_uri=vm_id,
                     metricnames='Percentage CPU',
                     aggregation=aggregation,
-                    interval=interval,
-                    timespan=timespan
+                    interval=self.interval,
+                    timespan=self.timespan
                 )
 
                 # Calculate the average percentage CPU utilization
@@ -92,8 +96,8 @@ class AzureVM(AzureImpactNode):
                     resource_uri=vm_id,
                     metricnames='Available Memory Bytes',
                     aggregation=aggregation,
-                    interval=interval,
-                    timespan=timespan
+                    interval=self.interval,
+                    timespan=self.timespan
                 )
                 
                 # Calculate the total memory allocated to the virtual machine in bytes
@@ -125,8 +129,8 @@ class AzureVM(AzureImpactNode):
                                 resource_uri=extension.id,
                                 metricnames='GPU Utilization',
                                 aggregation=aggregation,
-                                interval=interval,
-                                timespan=timespan
+                                interval=self.interval,
+                                timespan=self.timespan
                             )
                             
                             if gpu_data.value:
@@ -156,7 +160,9 @@ class AzureVM(AzureImpactNode):
         return self.observations     
 
     def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
-        return self.inner_model.calculate(self.observations, carbon_intensity=100)
+        self.fetch_resources()
+        self.fetch_observations()
+        return self.inner_model.calculate(self.observations, carbon_intensity=100, timespan=self.timespan, metadata=self.metadata)
 
     def lookup_static_params(self) -> Dict[str, object]:
         return {}

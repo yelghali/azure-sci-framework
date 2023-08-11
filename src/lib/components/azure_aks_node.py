@@ -15,9 +15,12 @@ from azure.mgmt.monitor.models import MetricAggregationType
 from azure.mgmt.containerservice import ContainerServiceClient
 from azure.identity import DefaultAzureCredential
 
+aggregation = MetricAggregationType.AVERAGE #for monitoring queries
+
+
 class AKSNode(AzureImpactNode):
-    def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata):
-        super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata)
+    def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
+        super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan)
         self.type = "aksnode"
         self.resources = {}
         self.observations = {}
@@ -72,7 +75,7 @@ class AKSNode(AzureImpactNode):
         self.resources = node_resources
         return node_resources
 
-    def fetch_observations(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
+    def fetch_observations(self) -> Dict[str, Any]:
         subscription_id = self.resource_selectors.get("subscription_id", None)
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
         #node_id = self._get_node_id(node_name, resource_group_name)
@@ -91,8 +94,8 @@ class AKSNode(AzureImpactNode):
                 resource_uri=vm_id,
                 metricnames='Percentage CPU',
                 aggregation=aggregation,
-                interval=interval,
-                timespan=timespan
+                interval=self.interval,
+                timespan=self.timespan
             )
 
             # Calculate the average percentage CPU utilization
@@ -116,8 +119,8 @@ class AKSNode(AzureImpactNode):
                 resource_uri=vm_id,
                 metricnames='Available Memory Bytes',
                 aggregation=aggregation,
-                interval=interval,
-                timespan=timespan
+                interval=self.interval,
+                timespan=self.timespan
             )
             
             
@@ -137,9 +140,7 @@ class AKSNode(AzureImpactNode):
 
             average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
             memory_utilization = average_consumed_memory_gb_during_timespan
-            print(memory_utilization)
-            print(average_consumed_memory_gb_items)
-            print(total_memory_allocated)
+
             # Fetch GPU utilization (if available)
             gpu_utilization = 0 #TODO
 
@@ -156,7 +157,7 @@ class AKSNode(AzureImpactNode):
  
 
     def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity)
+        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, metadata=self.metadata)
 
     def lookup_static_params(self) -> Dict[str, Any]:
         return {}
