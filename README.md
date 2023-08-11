@@ -108,6 +108,7 @@ curl -X POST \
 
 In this example, our app e-shop, has a **shared** VM, and we want to get the carbon impact of the application over the last 24 hour (timespan).
 
+### query
 ```python
 
 auth_params = {
@@ -152,6 +153,29 @@ workload = AttributedImpactNodeInterface(name = "myworkload",
                                           timespan=timespan,
                                           interval=interval)
 print(workload.calculate())
+```
+
+
+### response (Json of objects)
+```json
+{
+	'myworkload': SCIImpactMetricsInterface(name = 'myworkload', unit = 'severalUnits', type = 'attributedimpactnode', model = 'attributedimpactfromnode', description = 'Description of SCI Impact Metrics', timespan = 'PT24H', interval = 'PT5M', E_CPU = 0.576, E_MEM = 0.31337428009815704, E_GPU = 0.0, E = 0.889374280098157, I = 100.0, M = 4.280821917808219e-05, SCI = 88.93747081803488, metadata = {
+		'attributed': 'True',
+		'host_node_name': 'mywebserver'
+	}, observations = {
+		'node_host_cpu_util_percent': 50,
+		'node_host_memory_util_percent': 50,
+		'node_host_gpu_util_percent': 50
+	}, components = [], host_node = {
+		'mywebserver': SCIImpactMetricsInterface(name = 'tototatar', unit = 'severalUnits', type = 'azurevm', model = 'computeserver_static_imp', description = 'Description of SCI Impact Metrics', timespan = 'PT24H', interval = 'PT5M', E_CPU = 1.152, E_MEM = 0.6267485601963141, E_GPU = 0.0, E = 1.778748560196314, I = 100.0, M = 4.280821917808219e-05, SCI = 177.8748988278506, metadata = {
+			'resource_name': 'tototatar'
+		}, observations = {
+			'average_cpu_percentage': 2.9743745726495727,
+			'average_memory_gb': 1.6493383163060897,
+			'average_gpu_percentage': 0
+		}, components = [], host_node = {})
+	})
+}
 ```
 
 
