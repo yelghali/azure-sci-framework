@@ -26,7 +26,13 @@ Our App is composed in this case of 2 pods, each pod running on a node (could be
 
 The Imapct of a pod, is deducated from the impact of the node it is running on. (attribution pattern) ; and we use % pod utl of node resouces ( average % CPU, % of memory and % of GPU) -> during the timespan defined by the query
 
+so :
+* SCI of e-shop App = sum of SCI of pods ; 
+* and SCI of pod = SCI of node * % of node resources used by the pod
+
 ### query
+
+```bash
 
 
 curl -X POST \
@@ -57,6 +63,7 @@ curl -X POST \
     "interval": "PT5M",
     "timespan": "PT24H"
 }'
+```	
 
 ### response
 ```json
