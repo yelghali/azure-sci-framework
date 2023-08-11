@@ -17,7 +17,7 @@ In this example, our app e-shop, has a **dedicated** VM, and we want to get the 
 
 so SCI of e-shop App = SCI of VM (because the VM is not shared with other apps)
 
-### response
+### query
 ```bash
 
 curl -X POST \
@@ -100,7 +100,7 @@ curl -X POST \
 		"host_node": {}
 	}
 }
-```json
+```
 
 ## example of an API call to get emissions of a Kubernetes based App
 
