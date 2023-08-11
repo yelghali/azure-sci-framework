@@ -12,13 +12,10 @@ from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.MetricsExporter.exporter import MetricsExporter
 
 auth_params = {
-    "tenant_id": "12345678-1234-1234-1234-123456789012",
-    "client_id": "12345678-1234-1234-1234-123456789012",
-    "client_secret": "12345678-1234-1234-1234-123456789012"
 }
 
 resource_selectors = {
-    "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+    "subscription_id": "",
     "resource_group": "webapprename",
     "name": "tototatar",
 }
@@ -38,22 +35,24 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
              timespan=timespan,
              interval=interval)
 
-print(vm.fetch_resources())
-print(vm.fetch_observations())
+#print(vm.fetch_resources())
+#print(vm.fetch_observations())
 print(vm.calculate())
 
-# manual_observations = {
-#     "node_host_cpu_util_percent" : 50,
-#     "node_host_memory_util_percent" : 50,
-#     "node_host_gpu_util_percent" : 50,
-# }
+manual_observations = {
+     "node_host_cpu_util_percent" : 50,
+     "node_host_memory_util_percent" : 50,
+     "node_host_gpu_util_percent" : 50
+ }
 
-# workload = AttributedImpactNodeInterface(name = "myworkload", 
-#                                          host_node=vm, 
-#                                          carbon_intensity_provider=None, 
-#                                          metadata=metadata, 
-#                                          observations=manual_observations)
-#print(workload.calculate())
+workload = AttributedImpactNodeInterface(name = "myworkload", 
+                                          host_node=vm, 
+                                          carbon_intensity_provider=None, 
+                                          metadata=metadata, 
+                                          observations=manual_observations,
+                                          timespan=timespan,
+                                          interval=interval)
+print(workload.calculate())
 
 
 
