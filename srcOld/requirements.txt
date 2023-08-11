@@ -1,4 +1,0 @@
-kubernetes
-prometheus_client
-azure-monitor-query
-azure-identity
