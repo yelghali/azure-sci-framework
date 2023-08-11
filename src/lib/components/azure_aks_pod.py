@@ -163,7 +163,7 @@ class AKSPod(AzureImpactNode):
 
 
             # Define the Prometheus query to get the memory usage of pods by node
-            pod_node_memory_usage = f'avg(node_namespace_pod_container:container_memory_working_set_bytes{{pod=~"{pod_names}"}}) by (pod)'
+            pod_node_memory_usage = f'sum(node_namespace_pod_container:container_memory_working_set_bytes{{pod=~"{pod_names}"}}) by (pod)'
 
             # Run the query and get the results
             pod_node_memory_usage_metrics = self.query_prometheus(self.prometheus_endpoint, pod_node_memory_usage, interval, timespan)
