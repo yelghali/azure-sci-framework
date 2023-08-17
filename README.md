@@ -32,7 +32,7 @@ the user sends the impactRequest to the Impact Engine API or CLI, which returns 
 
 ### the current implementation
 
-* Model : SCI based on the DOW study case (can be used for any compute server)
+* Model : SCI based on the [DOW study case](https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md) (can be used for any compute server)
 
 * Components (or impactNodes) : AzureVM, AKSNode, AKSPod, AzureFunction -> all use the same model
 
