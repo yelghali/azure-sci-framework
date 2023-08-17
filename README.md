@@ -14,7 +14,8 @@ This project is an implementation of the Impact engine Framework, that provides 
 ## How it works
 
 ### built-in objects : ImpactModels, ImpactNodes, ImpactMetrics
-![image](https://github.com/yelghali/imapct-engine-framework/assets/966110/0466f19c-6e9b-4c93-8596-1874e4223280)
+![image](https://github.com/yelghali/imapct-engine-framework/assets/966110/be18684d-3051-4f79-b2fb-1796dcb897c7)
+
 
 
 The impactModel is the low level object that defines the impact calculation (here SCI), and the impact metrics that are used in the equation (CPU, RAM, GPU for SCI)
