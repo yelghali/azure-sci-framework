@@ -44,7 +44,7 @@ In this example, our app e-shop, has a **dedicated** VM, and we want to get the 
 
 so SCI of e-shop App = SCI of VM (because the VM is not shared with other apps)
 
-### query
+### query (ImpactQuery)
 ```bash
 
 curl -X POST \
@@ -74,7 +74,7 @@ curl -X POST \
 }'
 ```
 
-### response
+### response (ImpactMetric)
 ```json
 {
 	"e-shop": {
