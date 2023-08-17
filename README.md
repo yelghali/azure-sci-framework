@@ -18,7 +18,7 @@ This project is an implementation of the Impact engine Framework, that provides 
 
 
 
-The impactModel is the low level object that defines the impact calculation (here SCI), and the impact metrics that are used in the equation (CPU, RAM, GPU for SCI)
+The impactModel is the low level object that defines the impact calculation (here SCI), and the impact metrics that are used in the equation (CPU, RAM, GPU + timespan for SCI)
 
 The impactNode is the object that represents the infrastructure component (VM, pod, etc..) ; it is associated to an impactModel. It fetches the metrics from the infrastructure component, and calculates the model.calculate to return an imapctMetric.
 
