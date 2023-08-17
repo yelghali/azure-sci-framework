@@ -14,7 +14,8 @@ This project is an implementation of the Impact engine Framework, that provides 
 ## How it works
 
 ### built-in objects : ImpactModels, ImpactNodes, ImpactMetrics
-![Alt text](image-1.png)
+![image](https://github.com/yelghali/imapct-engine-framework/assets/966110/0466f19c-6e9b-4c93-8596-1874e4223280)
+
 
 The impactModel is the low level object that defines the impact calculation (here SCI), and the impact metrics that are used in the equation (CPU, RAM, GPU for SCI)
 
@@ -22,7 +23,8 @@ The impactNode is the object that represents the infrastructure component (VM, p
 
 ### the user experience
 
-![Alt text](image-2.png)
+![image](https://github.com/yelghali/imapct-engine-framework/assets/966110/3156c2f9-49ad-4cf0-989c-d74d843bf093)
+
 the user creates an impactRequest (Yaml, json) that describes the application, and the resources it uses (VMs, pods, etc..) ; and the timespan over which he wants to get the carbon impact of the application (R in the SCI equation)
 
 the user sends the impactRequest to the Impact Engine API or CLI, which returns the carbon impact of the application (SCI) ; and the carbon impact of each resource used by the application (E, I, M)
