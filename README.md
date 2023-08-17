@@ -2,7 +2,7 @@
 * AS a developer, I want to estimate the carbon impact of my application (which uses several infrastructure components)
 * As a developer / admin, I want to be able to see the carbon impact of my application over time (in dashboards)
 
-# This project is a POC of the ief framework in pyhton (wip to converge wuth the final ief spec)
+# This project is a POC of the ief framework in python (wip to converge wuth the final ief spec)
 
 This project is an implementation of the Impact engine Framework, that provides : 
 * An API : to calculate carbon metrics of an application (ad-hoc)
