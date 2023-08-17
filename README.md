@@ -13,7 +13,7 @@ This project is an implementation of the Impact engine Framework, that provides 
 
 ## How it works
 
-### built-in objects : ImpactModels, ImpactNodes, ImpactMetrics
+### IEF Core objects : ImpactModels, ImpactNodes, ImpactMetrics
 ![image](https://github.com/yelghali/imapct-engine-framework/assets/966110/be18684d-3051-4f79-b2fb-1796dcb897c7)
 
 
