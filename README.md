@@ -28,6 +28,11 @@ the user creates an impactRequest (Yaml, json) that describes the application, a
 the user sends the impactRequest to the Impact Engine API or CLI, which returns the carbon impact of the application (SCI) ; and the carbon impact of each resource used by the application (E, I, M)
 
 
+### the current implementation
+
+* Model : SCI based on the DOW study case (can be used for any compute server)
+
+* Components (or impactNodes) : AzureVM, AKSNode, AKSPod, AzureFunction -> all use the same model
 
 
 ## example of an API call to get emissions of a VM based App
