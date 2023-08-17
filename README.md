@@ -11,6 +11,25 @@ This project is an implementation of the Impact engine Framework, that provides 
 * An SCI model for compute server, based on the SCI study case : https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md
 
 
+## How it works
+
+### built-in objects : ImpactModels, ImpactNodes, ImpactMetrics
+![Alt text](image-1.png)
+
+The impactModel is the low level object that defines the impact calculation (here SCI), and the impact metrics that are used in the equation (CPU, RAM, GPU for SCI)
+
+The impactNode is the object that represents the infrastructure component (VM, pod, etc..) ; it is associated to an impactModel. It fetches the metrics from the infrastructure component, and calculates the model.calculate to return an imapctMetric.
+
+### the user experience
+
+![Alt text](image-2.png)
+the user creates an impactRequest (Yaml, json) that describes the application, and the resources it uses (VMs, pods, etc..) ; and the timespan over which he wants to get the carbon impact of the application (R in the SCI equation)
+
+the user sends the impactRequest to the Impact Engine API or CLI, which returns the carbon impact of the application (SCI) ; and the carbon impact of each resource used by the application (E, I, M)
+
+
+
+
 ## example of an API call to get emissions of a VM based App
 
 In this example, our app e-shop, has a **dedicated** VM, and we want to get the carbon impact of the application over the last 24 hour (timespan).
