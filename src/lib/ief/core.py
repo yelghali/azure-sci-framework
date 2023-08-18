@@ -73,7 +73,7 @@ class ImpactModelPluginInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100, interval : str = "PT5M", timespan : str = "PT1H", metadata : dict [str, str] = {}) -> Dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100, interval : str = "PT5M", timespan : str = "PT1H", metadata : dict [str, str] = {}, static_params : dict[str,str] = None  ) -> Dict[str, SCIImpactMetricsInterface]:
         pass
 
 

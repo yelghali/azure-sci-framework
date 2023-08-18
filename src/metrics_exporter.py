@@ -15,7 +15,7 @@ auth_params = {
 }
 
 resource_selectors = {
-    "subscription_id": "",
+    "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
     "resource_group": "webapprename",
     "name": "tototatar",
 }
@@ -35,7 +35,9 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
              timespan=timespan,
              interval=interval)
 
-#print(vm.fetch_resources())
+print(vm.fetch_resources())
+#print(vm.lookup_static_params())
+
 #print(vm.fetch_observations())
 print(vm.calculate())
 
@@ -52,7 +54,7 @@ workload = AttributedImpactNodeInterface(name = "myworkload",
                                           observations=manual_observations,
                                           timespan=timespan,
                                           interval=interval)
-print(workload.calculate())
+#print(workload.calculate())
 
 
 

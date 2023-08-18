@@ -17,6 +17,7 @@ class AzureVM(AzureImpactNode):
         self.type = "azurevm"
         self.resources = {}
         self.observations = {}
+        self.static_params = {}
 
     def list_supported_skus(self):
         return ["D3V4"]
@@ -162,7 +163,31 @@ class AzureVM(AzureImpactNode):
     def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
         self.fetch_resources()
         self.fetch_observations()
-        return self.inner_model.calculate(self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata)
+        self.lookup_static_params()
+        return self.inner_model.calculate(observations=self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata, static_params=self.static_params)
 
     def lookup_static_params(self) -> Dict[str, object]:
-        return {}
+        #get TDP for the VM sku, from the static data file
+
+        for resource_name, resource  in self.resources.items():
+            if resource.type == 'Microsoft.Compute/virtualMachines':
+                #print(resource.os_profile)
+                print(resource.hardware_profile)
+
+                vm_id = resource.id
+                vm_name = resource.name
+                vm_sku = resource.hardware_profile.vm_size
+                vm_sku_tdp = 180 #default value for unknown VM SKUs
+
+                #get TDP for the VM sku, from the static data file
+                with open('lib/static_data/azure_vm_tdp.csv', 'r') as f:
+                    for line in f:
+                        if vm_sku in line:
+                            vm_sku_tdp = line.split(',')[1]
+                            break
+
+            self.static_params[vm_name] = {
+                'vm_sku': vm_sku,
+                'vm_sku_tdp': vm_sku_tdp
+            }    
+        return self.static_params

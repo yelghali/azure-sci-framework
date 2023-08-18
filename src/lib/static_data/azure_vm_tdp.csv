@@ -1,0 +1,35 @@
+Series,VM sku family,Processor,TDP (W)
+D,Dv3,Intel® XEON ® E5-2673 v4,135
+D,Dv4,Intel® Xeon® Platinum 8272CL,195
+D,Ddv4,Intel® Xeon® Platinum 8272CL,195
+D,Dv5,Intel® Xeon® Platinum 8370C,270
+D,Ddv5,Intel® Xeon® Platinum 8370C,270
+D,Dav4,AMD EPYC™ 7452,155
+D,Dasv4,AMD EPYC™ 7452,155
+D,Dasv5,AMD EPYC™ 7763v,280
+D,Dadsv5,AMD EPYC™ 7763v,280
+D,Dpsv5,Ampere Altra 64-bit Multi-Core Arm-based processor,
+D,Dpdsv5,Ampere Altra 64-bit Multi-Core Arm-based processor,
+E,Ev4,Intel® Xeon® Platinum 8272CL,195
+E,Edv4,Intel® Xeon® Platinum 8272CL,195
+E,Ev5,Intel® Xeon® Platinum 8370C,270
+E,Edv5,Intel® Xeon® Platinum 8370C,270
+E,Eav4,AMD EPYC™ 7452,155
+E,Easv4, AMD EPYC™_7452,155
+E,Easv5, AMD EPYC™ 7763v,280
+E,Eadsv5, AMD EPYC™ 7763v,280
+E,Epsv5, Ampere Altra_64-bit Multi-Core Arm-based processor,
+E,Epdsv5, Ampere Altra_64-bit Multi-Core Arm-based processor,
+F,Fsv2, Intel Xeon® Platinum_8168,205
+G,G*, Intel® Xeon® processor_ E5 v3 family,
+H,HB*, AMD EPYC™_7003-serie,
+H,HC*, Intel Xeon Platinum_8168,205
+Ls,Ls, Intel_E5_Xeon_v3,
+Ls,Lsv2,_AMD_EPYC™_7551,
+Ls,Lasv3,_AMD_EPYC™_7763v,280
+Ls,Lsv3, Intel® Xeon® Platinum_8370C,270
+M,Mv2, Intel® Xeon® Platinum_8180M,
+N,NC, NVIDIA’s Tesla V100 GPU,
+N,ND, NVIDIA Tesla P40 GPU,
+N,NDv2, NVIDIA Tesla V100 GPU,
+N,NV, NVIDIA Tesla M60 GPU,
