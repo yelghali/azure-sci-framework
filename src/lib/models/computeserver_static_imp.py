@@ -23,7 +23,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def authenticate(self, auth_params: Dict[str, object]) -> None:
         pass
 
-    #TODO : core_count variable
+
     def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H', core_count=2):
         if tdp <= 0 or core_count <= 0:
             warnings.warn("TDP must be a positive number")
@@ -128,17 +128,19 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             mem_util = resource_observations.get("average_memory_gb", 0)
             gpu_util = resource_observations.get("average_gpu_percentage", 0)
 
-            tdp = static_params.get(resource_name, {}).get("vm_sku_tdp", 200) or 200
+            tdp = static_params.get(resource_name, {}).get("vm_sku_tdp", 200) or 200 # used for E-CPU and E-GPU metrics
 
+            rr = static_params.get(resource_name, {}).get("rr", 2) or 2 #used to calculate E and M metrics
+            
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
-            ecpu = self.calculate_ecpu(cpu_util, timespan=timespan, tdp=tdp)
+            ecpu = self.calculate_ecpu(cpu_util, timespan=timespan, tdp=tdp, core_count=rr)
             emem = self.calculate_emem(mem_util) #memory model uses only the average memory utilization in GB (calculated for the given timespan))
-            egpu = self.calculate_egpu(gpu_util, timespan=timespan, tdp=tdp)
+            egpu = self.calculate_egpu(gpu_util, timespan=timespan, tdp=tdp, gpu_count=rr)
 
             # Calculate the M and SCI metrics
             i = carbon_intensity
 
-            rr = static_params.get(resource_name, {}).get("rr", 2) or 2
+
             total_vcpus = static_params.get(resource_name, {}).get("total_vcpus", 16) or 16
             te = static_params.get(resource_name, {}).get("te", 1200) or 1200
 
