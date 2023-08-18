@@ -212,10 +212,29 @@ class AzureVM(AzureImpactNode):
                             break
 
 
+                
+                # TE : Total embodied emissions for the VM hardware
+                te = 1200
+                
+                # Load the CSV file
+                with open('lib/static_data/ccf_coefficients-azure-embodied.csv', newline='') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    
+                    vm_sku_short = vm_sku.split('_')[1]
+                    # Find the row that matches the VM series and size
+                    for row in reader:
+                        #if row['Series'] == vm_series and row['VM'] == vm_sku:
+                        if row['type'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
+                            # Extract the rr and total_vcpus values
+                            te = float(row['total'])
+
+                            break
+
             self.static_params[vm_name] = {
                 'vm_sku': vm_sku,
                 'vm_sku_tdp': vm_sku_tdp,
                 'rr': rr,
-                'total_vcpus': total_vcpus
+                'total_vcpus': total_vcpus,
+                'te': te
             }    
         return self.static_params

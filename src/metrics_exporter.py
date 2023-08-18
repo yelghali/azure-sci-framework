@@ -24,7 +24,7 @@ metadata = {
     "region": "westeurope"
 }
 
-timespan = "PT24H"
+timespan = "PT1H"
 interval = "PT5M"
 
 vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  
@@ -36,7 +36,7 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
              interval=interval)
 
 print(vm.fetch_resources())
-#print(vm.lookup_static_params())
+print(vm.lookup_static_params())
 
 #print(vm.fetch_observations())
 print(vm.calculate())

@@ -83,9 +83,10 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         energy_consumption = gpu_count * (power_consumption * duartion_in_hours / 1000) # W * H / 1000 = KWH
         return energy_consumption
 
-    def calculate_m(self, timespan='PT1H', rr = 2, total_vcpus = 20 ) -> float:
+    def calculate_m(self, timespan='PT1H', rr = 2, total_vcpus = 20, te = 1200 ) -> float:
         # TE: Embodied carbon estimates for the servers from the Cloud Carbon Footprint Coefficient Data Set
-        te = 0.5  # kgCO2e/hour
+        te = te  # kgCO2e
+        te_g = te * 1000  # gCO2e
 
         # TR: Time reserved for the hardware
         tr = 1  # hour
@@ -106,9 +107,12 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         print("duartion_in_hours : " + str(duartion_in_hours))
         print("rr : " + str(rr))
         print("total_vcpus : " + str(total_vcpus))
+        print("te Kgco2 : " + str(te))
+        print("te gco2 : " + str(te_g))
+        print("el : " + str(el))
 
         # Calculate M using the equation M = TE * (TR/EL) * (RR/TR)
-        m = te * (tr / el) * (rr / total_vcpus)
+        m = te_g * (tr / el) * (rr / total_vcpus)
 
         return m
 
@@ -124,10 +128,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             mem_util = resource_observations.get("average_memory_gb", 0)
             gpu_util = resource_observations.get("average_gpu_percentage", 0)
 
-            tdp = static_params.get(resource_name, {}).get("vm_sku_tdp", 200)
-    
-            rr = static_params.get(resource_name, {}).get("rr", 2)
-            total_vcpus = static_params.get(resource_name, {}).get("total_vcpus", 16)
+            tdp = static_params.get(resource_name, {}).get("vm_sku_tdp", 200) or 200
 
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
             ecpu = self.calculate_ecpu(cpu_util, timespan=timespan, tdp=tdp)
@@ -136,7 +137,12 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
             # Calculate the M and SCI metrics
             i = carbon_intensity
-            m = self.calculate_m(timespan=timespan, rr=rr, total_vcpus=total_vcpus)
+
+            rr = static_params.get(resource_name, {}).get("rr", 2) or 2
+            total_vcpus = static_params.get(resource_name, {}).get("total_vcpus", 16) or 16
+            te = static_params.get(resource_name, {}).get("te", 1200) or 1200
+
+            m = self.calculate_m(timespan=timespan, rr=rr, total_vcpus=total_vcpus, te=te)
 
             # Create a dictionary with the metric names and values for this resource
             impact_metrics = {
