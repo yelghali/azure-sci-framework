@@ -7,6 +7,7 @@ from azure.mgmt.compute.models import VirtualMachine
 
 from azure.mgmt.monitor.models import MetricAggregationType
 
+import csv
 
 aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 
@@ -177,6 +178,7 @@ class AzureVM(AzureImpactNode):
                 vm_id = resource.id
                 vm_name = resource.name
                 vm_sku = resource.hardware_profile.vm_size
+
                 vm_sku_tdp = 180 #default value for unknown VM SKUs
 
                 #get TDP for the VM sku, from the static data file
@@ -186,8 +188,34 @@ class AzureVM(AzureImpactNode):
                             vm_sku_tdp = line.split(',')[1]
                             break
 
+
+                # RR: Resources reserved for use by the software
+                rr = 2  # vCPUs
+
+                # TR: Total number of resources available
+                total_vcpus = 16
+
+                
+                # Load the CSV file
+                with open('lib/static_data/ccf_azure_instances.csv', newline='') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    
+                    vm_sku_short = vm_sku.split('_')[1]
+                    # Find the row that matches the VM series and size
+                    for row in reader:
+                        #if row['Series'] == vm_series and row['VM'] == vm_sku:
+                        if row['Virtual Machine'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
+                            # Extract the rr and total_vcpus values
+                            rr = int(row['Instance vCPUs'])
+                            total_vcpus = int(row['Platform vCPUs (highest vCPU possible)'])
+
+                            break
+
+
             self.static_params[vm_name] = {
                 'vm_sku': vm_sku,
-                'vm_sku_tdp': vm_sku_tdp
+                'vm_sku_tdp': vm_sku_tdp,
+                'rr': rr,
+                'total_vcpus': total_vcpus
             }    
         return self.static_params
