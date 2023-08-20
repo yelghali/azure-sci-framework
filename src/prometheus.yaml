@@ -10,7 +10,7 @@ scrape_configs:
           - "localhost:9090"
 
   # Python example
-  - job_name: "63957470"
+  - job_name: "ief-metrics-exporter"
     static_configs:
       - targets:
-          - "127.0.0.1:8000"
+          - "ief_metrics_exporter:8000"

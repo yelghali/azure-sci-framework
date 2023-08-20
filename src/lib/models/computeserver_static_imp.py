@@ -41,9 +41,25 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             tdp_coefficient = 1.02
 
         power_consumption = tdp * tdp_coefficient
+
+
+        #duration = parse_duration(timespan)
+        #duration_in_hours = float(duration.time.hours)
+        
+        # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
         duration = parse_duration(timespan)
-        duartion_in_hours = float(duration.time.hours)
-        energy_consumption = core_count * (power_consumption * duartion_in_hours / 1000) # W * H / 1000 = KWH
+        duration_in_minutes = float(duration.time.minutes)
+        duration_in_hours = duration_in_minutes / 60.0
+
+        if hasattr(duration.time, 'hours'):
+            duration_in_hours += float(duration.time.hours)
+
+        if hasattr(duration.time, 'days'):
+            duration_in_hours += float(duration.time.days) * 24.0
+        
+        
+        
+        energy_consumption = core_count * (power_consumption * duration_in_hours / 1000) # W * H / 1000 = KWH
         return energy_consumption
 
 
@@ -90,9 +106,23 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         # TR: Time reserved for the hardware
         tr = 1  # hour
+        
+        #duration = parse_duration(timespan)
+        #duration_in_hours = float(duration.time.hours)
+
+        # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
         duration = parse_duration(timespan)
-        duartion_in_hours = float(duration.time.hours)
-        if duartion_in_hours : tr = duartion_in_hours
+        duration_in_minutes = float(duration.time.minutes)
+        duration_in_hours = duration_in_minutes / 60.0
+
+        if hasattr(duration.time, 'hours'):
+            duration_in_hours += float(duration.time.hours)
+
+        if hasattr(duration.time, 'days'):
+            duration_in_hours += float(duration.time.days) * 24.0
+
+
+        if duration_in_hours : tr = duration_in_hours
 
         # EL: Expected lifespan of the equipment
         el = 35040  # hours (4 years)
@@ -104,7 +134,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         total_vcpus = total_vcpus
 
         print("tr : " + str(tr))
-        print("duartion_in_hours : " + str(duartion_in_hours))
+        #print("duartion_in_hours : " + str(duration_in_hours))
         print("rr : " + str(rr))
         print("total_vcpus : " + str(total_vcpus))
         print("te Kgco2 : " + str(te))

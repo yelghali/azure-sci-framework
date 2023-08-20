@@ -1,0 +1,11 @@
+azure-mgmt-compute
+azure-mgmt-containerservice
+azure-mgmt-monitor
+azure-mgmt-resource
+azure-identity
+fastapi
+isoduration
+kubernetes
+prometheus-client
+pydantic
+uvicorn

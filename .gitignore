@@ -1,6 +1,12 @@
-# Ignore any file or directory named config
+# Ignore any file or directory named config or kubeconfig
 **/config
 
+**/kubeconfig
+
+**/__pycache__
 # Ignore other files and directories
 node_modules/
 dist/
+
+.env
+**/.env
