@@ -45,9 +45,10 @@ async def main():
     print(tata)
 
 
-    tutu = await vm.fetch_observations()
-    print(tutu)
-    print(vm.calculate())
+    #tutu = await vm.fetch_observations()
+    #print(tutu)
+    uuu = await vm.calculate()
+    print(uuu)
 
 if __name__ == '__main__':
     asyncio.run(main())

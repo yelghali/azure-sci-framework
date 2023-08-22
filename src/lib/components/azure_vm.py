@@ -11,6 +11,7 @@ import csv
 
 import asyncio
 
+import itertools
 
 aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 
@@ -177,38 +178,38 @@ class AzureVM(AzureImpactNode):
 
 
 
-    def fetch_observations1(self) -> Dict[str, object]:
-        """
-        Fetches a dictionary of metric observations from Azure Monitor.
+    # def fetch_observations1(self) -> Dict[str, object]:
+    #     """
+    #     Fetches a dictionary of metric observations from Azure Monitor.
 
-        :return: A dictionary containing metric observations.
-        """
-        subscription_id = self.resource_selectors.get("subscription_id", None)
-        monitor_client = MonitorManagementClient(self.credential, subscription_id)
+    #     :return: A dictionary containing metric observations.
+    #     """
+    #     subscription_id = self.resource_selectors.get("subscription_id", None)
+    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
 
-        for resource_name, resource in self.resources.items():
-            if resource.type == 'Microsoft.Compute/virtualMachines':
-                vm_id = resource.id
-                vm_name = resource.name
-                instance_memory = self.static_params[resource_name]['instance_memory']
+    #     for resource_name, resource in self.resources.items():
+    #         if resource.type == 'Microsoft.Compute/virtualMachines':
+    #             vm_id = resource.id
+    #             vm_name = resource.name
+    #             instance_memory = self.static_params[resource_name]['instance_memory']
 
-                cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
-                gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client)
+    #             cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
+    #             gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client)
 
-                self.observations[vm_name] = {
-                    'average_cpu_percentage': cpu_utilization,
-                    'average_memory_gb': memory_utilization,
-                    'average_gpu_percentage': gpu_utilization
-                }
+    #             self.observations[vm_name] = {
+    #                 'average_cpu_percentage': cpu_utilization,
+    #                 'average_memory_gb': memory_utilization,
+    #                 'average_gpu_percentage': gpu_utilization
+    #             }
 
-        return self.observations
+    #     return self.observations
 
  
 
-    def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
+    async def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
         #self.fetch_resources()
         #self.lookup_static_params()
-        #self.fetch_observations()
+        await self.fetch_observations()
 
         return self.inner_model.calculate(observations=self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata, static_params=self.static_params)
 
@@ -255,6 +256,44 @@ class AzureVM(AzureImpactNode):
 
 
     async def lookup_static_params(self) -> Dict[str, object]:
+        # Create a list of coroutines to run concurrently using a list comprehension
+        coroutines = [
+            (
+                self.get_vm_sku_tdp(resource.hardware_profile.vm_size),
+                self.get_vm_resources(resource.hardware_profile.vm_size),
+                self.get_vm_te(resource.hardware_profile.vm_size)
+            )
+            for resource_name, resource in self.resources.items()
+            if resource.type == 'Microsoft.Compute/virtualMachines'
+        ]
+
+        # Run the coroutines concurrently using asyncio.gather
+        results = await asyncio.gather(*[coro for coro in itertools.chain(*coroutines)])
+
+        # Process the results and update the static_params dictionary
+        i = 0
+        for resource_name, resource in self.resources.items():
+            if resource.type == 'Microsoft.Compute/virtualMachines':
+                vm_name = resource.name
+                vm_sku_tdp = results[i]
+                rr, total_vcpus, instance_memory = results[i+1]
+                te = results[i+2]
+
+                self.static_params[vm_name] = {
+                    'vm_sku': resource.hardware_profile.vm_size,
+                    'vm_sku_tdp': vm_sku_tdp,
+                    'rr': rr,
+                    'total_vcpus': total_vcpus,
+                    'te': te,
+                    'instance_memory': instance_memory
+                }
+
+                i += 3
+
+        return self.static_params
+
+
+    async def lookup_static_params1(self) -> Dict[str, object]:
         # Get static parameters for each VM resource
         for resource_name, resource in self.resources.items():
             if resource.type == 'Microsoft.Compute/virtualMachines':
