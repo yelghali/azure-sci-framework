@@ -108,12 +108,14 @@ async def process_impact_node(impact_node: ImpactNodeInterface, stop_event: asyn
     await impact_node.fetch_resources()
     await impact_node.lookup_static_params()
 
-    # fetch the observations and calculate the impact every 5 minutes
+    # fetch the observations and calculate + export the impact every 5 minutes
     while not stop_event.is_set():
 
         # fetch the observations and calculate the impact
         await impact_node.fetch_observations()
+        
         impact_metrics = await impact_node.calculate()
+
         print(impact_metrics)
 
         # export the metrics to prometheus
@@ -132,12 +134,7 @@ async def main(impact_nodes: List[ImpactNodeInterface]):
         task = asyncio.create_task(process_impact_node(impact_node, stop_event))
         tasks.append(task)
 
-    try:
-        await asyncio.gather(*tasks)
-    except KeyboardInterrupt:
-        stop_event.set()
-
-    # Wait for all tasks to complete
+    # Wait for the tasks to finish
     await asyncio.gather(*tasks)
 
 
