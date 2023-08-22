@@ -3,6 +3,9 @@ import sys
 from azure.mgmt.monitor.models import MetricAggregationType
 import time
 
+import asyncio
+
+#add lib to path
 sys.path.append('./lib')
 from lib.components.azure_vm import AzureVM
 from lib.components.azure_aks_node import AKSNode
@@ -35,11 +38,19 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
              timespan=timespan,
              interval=interval)
 
-#print(vm.fetch_resources())
-#print(vm.lookup_static_params())
+async def main():
+    toto = await vm.fetch_resources()
+    print(toto)
+    tata = await vm.lookup_static_params()
+    print(tata)
 
-#print(vm.fetch_observations())
-#print(vm.calculate())
+
+    tutu = await vm.fetch_observations()
+    print(tutu)
+    print(vm.calculate())
+
+if __name__ == '__main__':
+    asyncio.run(main())
 
 manual_observations = {
      "node_host_cpu_util_percent" : 50,
@@ -71,10 +82,10 @@ node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbo
 # aggregation = MetricAggregationType.AVERAGE
 
 #print(node)
-node.fetch_resources()
-print(node.lookup_static_params())
-print(node.fetch_observations())
-print(node.calculate())
+# node.fetch_resources()
+# print(node.lookup_static_params())
+# print(node.fetch_observations())
+# print(node.calculate())
 
 # #print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 
@@ -106,7 +117,7 @@ pod_resource_selectors = {
 
 
 
-# #static method
+#static method
 # MetricsExporter.start_http_server(port=8000)
 # while(True):
 
