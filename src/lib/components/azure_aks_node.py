@@ -16,6 +16,10 @@ from azure.mgmt.monitor.models import MetricAggregationType
 from azure.mgmt.containerservice import ContainerServiceClient
 from azure.identity import DefaultAzureCredential
 
+
+import asyncio
+import itertools
+
 aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 
 
@@ -47,7 +51,7 @@ class AKSNode(AzureVM):
         return resource_uri
 
 
-    def fetch_resources(self) -> Dict[str, object]:
+    async def fetch_resources(self) -> Dict[str, object]:
         # Load the Kubernetes configuration from the default location
         config.load_kube_config()
 
@@ -78,7 +82,7 @@ class AKSNode(AzureVM):
         return node_resources
 
 
-    def fetch_gpu_utilization(self, resource: object, monitor_client: MonitorManagementClient) -> float:
+    async def fetch_gpu_utilization(self, resource: object, monitor_client: MonitorManagementClient) -> float:
         return 0 #TODO
 
     def fetch_observations(self) -> Dict[str, object]:
@@ -106,99 +110,52 @@ class AKSNode(AzureVM):
 
         return self.observations
 
-
-    # def fetch_observations2(self) -> Dict[str, object]:
-    #     subscription_id = self.resource_selectors.get("subscription_id", None)
-    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
-    #     #node_id = self._get_node_id(node_name, resource_group_name)
-
-
-    #     observations = {}
-    #     for resource_name, resource  in self.resources.items():
-    #         vm_id = resource.spec.provider_id.replace('azure://','')
-    #         vm_name = resource.metadata.name
-    #         cpu_utilization = None
-    #         memory_utilization = None
-    #         gpu_utilization = None
-
-    #         instance_memory = self.static_params[resource_name]['instance_memory']
-
-    #         # Fetch CPU utilization
-    #         cpu_data = monitor_client.metrics.list(
-    #             resource_uri=vm_id,
-    #             metricnames='Percentage CPU',
-    #             aggregation=aggregation,
-    #             interval=self.interval,
-    #             timespan=self.timespan
-    #         )
-
-    #         # Calculate the average percentage CPU utilization
-    #         total_cpu_utilization = 0
-    #         data_points = 0
-    #         for metric in cpu_data.value:
-    #             for time_series in metric.timeseries:
-    #                 for data in time_series.data:
-    #                     if data.average is not None:
-    #                         total_cpu_utilization += data.average
-    #                         data_points += 1
-    #         if data_points > 0:
-    #             average_cpu_utilization = total_cpu_utilization / data_points
-    #         else:
-    #             average_cpu_utilization = 0
-    #         cpu_utilization = average_cpu_utilization
-    #         #print(cpu_utilization)
-
-    #         # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
-    #         memory_data = monitor_client.metrics.list(
-    #             resource_uri=vm_id,
-    #             metricnames='Available Memory Bytes',
-    #             aggregation=aggregation,
-    #             interval=self.interval,
-    #             timespan=self.timespan
-    #         )
-            
-            
-    #         # Calculate the total memory allocated to the virtual machine in bytes
-    #         total_memory_allocated = instance_memory
-
-
-    #         # Calculate the average available memory in GB
-    #         average_consumed_memory_gb_items =  []
-    #         average_consumed_memory_gb_during_timespan = 0
-    #         for metric in memory_data.value:
-    #             for time_series in metric.timeseries:
-    #                 for data in time_series.data:
-    #                     if data.average is not None:
-    #                         datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
-    #                         average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
-
-    #         average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
-    #         memory_utilization = average_consumed_memory_gb_during_timespan
-
-    #         # Fetch GPU utilization (if available)
-    #         gpu_utilization = 0 #TODO
-
-
-    #         if memory_utilization < 0 : memory_utilization = 0
-    #         self.observations[vm_name] = {
-    #             'average_cpu_percentage': cpu_utilization,
-    #             'average_memory_gb': memory_utilization,
-    #             'average_gpu_percentage': gpu_utilization
-    #         }
-
-    #     return self.observations   
-
  
 
     def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        self.fetch_resources()
+        #self.fetch_resources()
         self.lookup_static_params()
         self.fetch_observations()
         return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, interval=self.interval, timespan=self.timespan, metadata=self.metadata, static_params=self.static_params)
 
 
+    async def lookup_static_params(self) -> Dict[str, object]:
+        # Create a list of coroutines to run concurrently using a list comprehension
+        coroutines = [
+            (
+                self.get_vm_sku_tdp(resource.metadata.labels.get("beta.kubernetes.io/instance-type", "")),
+                self.get_vm_resources(resource.metadata.labels.get("beta.kubernetes.io/instance-type", "")),
+                self.get_vm_te(resource.metadata.labels.get("beta.kubernetes.io/instance-type", ""))
+            )
+            for resource_name, resource in self.resources.items()
+        ]
 
-    def lookup_static_params(self) -> Dict[str, object]:
+        # Run the coroutines concurrently using asyncio.gather
+        results = await asyncio.gather(*[coro for coro in itertools.chain(*coroutines)])
+
+        # Process the results and update the static_params dictionary
+        i = 0
+        for resource_name, resource in self.resources.items():
+            vm_name = resource.metadata.name
+            vm_sku_tdp = results[i]
+            rr, total_vcpus, instance_memory = results[i+1]
+            te = results[i+2]
+
+            self.static_params[vm_name] = {
+                'vm_sku': resource.metadata.labels.get("beta.kubernetes.io/instance-type", ""),
+                'vm_sku_tdp': vm_sku_tdp,
+                'rr': rr,
+                'total_vcpus': total_vcpus,
+                'te': te,
+                'instance_memory': instance_memory
+            }
+
+            i += 3
+
+        return self.static_params
+
+
+    def lookup_static_params1(self) -> Dict[str, object]:
 
         for resource_name, resource  in self.resources.items():
             vm_id = resource.spec.provider_id.replace('azure://','')

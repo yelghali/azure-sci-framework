@@ -38,20 +38,6 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
              timespan=timespan,
              interval=interval)
 
-async def main():
-    toto = await vm.fetch_resources()
-    print(toto)
-    tata = await vm.lookup_static_params()
-    print(tata)
-
-
-    #tutu = await vm.fetch_observations()
-    #print(tutu)
-    uuu = await vm.calculate()
-    print(uuu)
-
-if __name__ == '__main__':
-    asyncio.run(main())
 
 manual_observations = {
      "node_host_cpu_util_percent" : 50,
@@ -91,6 +77,27 @@ node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbo
 # #print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 
 # print(node.calculate())
+
+
+async def main():
+    # toto = await vm.fetch_resources()
+    # print(toto)
+    # tata = await vm.lookup_static_params()
+    # print(tata)
+
+
+    # #tutu = await vm.fetch_observations()
+    # #print(tutu)
+    # uuu = await vm.calculate()
+    # print(uuu)
+
+    await node.fetch_resources()
+    toto = await node.lookup_static_params()
+    print(toto)
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
 
 
 pod_resource_selectors = {

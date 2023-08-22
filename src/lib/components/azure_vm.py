@@ -207,8 +207,14 @@ class AzureVM(AzureImpactNode):
  
 
     async def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
-        #self.fetch_resources()
-        #self.lookup_static_params()
+        # if self.resources == {}: call fetch_resources
+        if self.resources == {} or self.resources == None:
+            await self.fetch_resources()
+        # if self.static_params == {}: call lookup_static_params
+        if self.static_params == {} or self.static_params == None:
+            await self.lookup_static_params()
+
+        #always get updated observations
         await self.fetch_observations()
 
         return self.inner_model.calculate(observations=self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata, static_params=self.static_params)
@@ -293,26 +299,26 @@ class AzureVM(AzureImpactNode):
         return self.static_params
 
 
-    async def lookup_static_params1(self) -> Dict[str, object]:
-        # Get static parameters for each VM resource
-        for resource_name, resource in self.resources.items():
-            if resource.type == 'Microsoft.Compute/virtualMachines':
-                vm_id = resource.id
-                vm_name = resource.name
-                vm_sku = resource.hardware_profile.vm_size
+    # async def lookup_static_params1(self) -> Dict[str, object]:
+    #     # Get static parameters for each VM resource
+    #     for resource_name, resource in self.resources.items():
+    #         if resource.type == 'Microsoft.Compute/virtualMachines':
+    #             vm_id = resource.id
+    #             vm_name = resource.name
+    #             vm_sku = resource.hardware_profile.vm_size
 
-                vm_sku_tdp = await self.get_vm_sku_tdp(vm_sku)
-                rr, total_vcpus, instance_memory = await self.get_vm_resources(vm_sku)
-                te = await self.get_vm_te(vm_sku)
+    #             vm_sku_tdp = await self.get_vm_sku_tdp(vm_sku)
+    #             rr, total_vcpus, instance_memory = await self.get_vm_resources(vm_sku)
+    #             te = await self.get_vm_te(vm_sku)
 
-                self.static_params[vm_name] = {
-                    'vm_sku': vm_sku,
-                    'vm_sku_tdp': vm_sku_tdp,
-                    'rr': rr,
-                    'total_vcpus': total_vcpus,
-                    'te': te,
-                    'instance_memory': instance_memory
-                }
-        return self.static_params
+    #             self.static_params[vm_name] = {
+    #                 'vm_sku': vm_sku,
+    #                 'vm_sku_tdp': vm_sku_tdp,
+    #                 'rr': rr,
+    #                 'total_vcpus': total_vcpus,
+    #                 'te': te,
+    #                 'instance_memory': instance_memory
+    #             }
+    #     return self.static_params
 
 
