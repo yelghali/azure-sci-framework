@@ -35,10 +35,10 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
              timespan=timespan,
              interval=interval)
 
-print(vm.fetch_resources())
-print(vm.lookup_static_params())
+#print(vm.fetch_resources())
+#print(vm.lookup_static_params())
 
-print(vm.fetch_observations())
+#print(vm.fetch_observations())
 #print(vm.calculate())
 
 manual_observations = {
@@ -71,8 +71,10 @@ node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbo
 # aggregation = MetricAggregationType.AVERAGE
 
 #print(node)
-# node.fetch_resources()
-# print(node.lookup_static_params())
+node.fetch_resources()
+print(node.lookup_static_params())
+print(node.fetch_observations())
+print(node.calculate())
 
 # #print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 

@@ -1,6 +1,6 @@
 import requests
 from typing import Dict, Any
-from lib.components.azure_base import AzureImpactNode
+from lib.components.azure_vm import AzureVM
 from lib.ief.core import SCIImpactMetricsInterface
 from lib.auth.azure import AzureManagedIdentityAuthParams
 
@@ -19,7 +19,7 @@ from azure.identity import DefaultAzureCredential
 aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 
 
-class AKSNode(AzureImpactNode):
+class AKSNode(AzureVM):
     def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
         super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan)
         self.type = "azure.compute.aks.node"
@@ -77,86 +77,116 @@ class AKSNode(AzureImpactNode):
         self.resources = node_resources
         return node_resources
 
+
+    def fetch_gpu_utilization(self, resource: object, monitor_client: MonitorManagementClient) -> float:
+        return 0 #TODO
+
     def fetch_observations(self) -> Dict[str, object]:
         subscription_id = self.resource_selectors.get("subscription_id", None)
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
         #node_id = self._get_node_id(node_name, resource_group_name)
 
-
-        observations = {}
         for resource_name, resource  in self.resources.items():
             vm_id = resource.spec.provider_id.replace('azure://','')
             vm_name = resource.metadata.name
-            cpu_utilization = None
-            memory_utilization = None
-            gpu_utilization = None
+            cpu_utilization = 0
+            memory_utilization = 0
+            gpu_utilization = 0
 
             instance_memory = self.static_params[resource_name]['instance_memory']
 
-            # Fetch CPU utilization
-            cpu_data = monitor_client.metrics.list(
-                resource_uri=vm_id,
-                metricnames='Percentage CPU',
-                aggregation=aggregation,
-                interval=self.interval,
-                timespan=self.timespan
-            )
-
-            # Calculate the average percentage CPU utilization
-            total_cpu_utilization = 0
-            data_points = 0
-            for metric in cpu_data.value:
-                for time_series in metric.timeseries:
-                    for data in time_series.data:
-                        if data.average is not None:
-                            total_cpu_utilization += data.average
-                            data_points += 1
-            if data_points > 0:
-                average_cpu_utilization = total_cpu_utilization / data_points
-            else:
-                average_cpu_utilization = 0
-            cpu_utilization = average_cpu_utilization
-            #print(cpu_utilization)
-
-            # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
-            memory_data = monitor_client.metrics.list(
-                resource_uri=vm_id,
-                metricnames='Available Memory Bytes',
-                aggregation=aggregation,
-                interval=self.interval,
-                timespan=self.timespan
-            )
+            cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
+            gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client) #returns 0 for now ; TOOD
             
-            
-            # Calculate the total memory allocated to the virtual machine in bytes
-            total_memory_allocated = instance_memory
-
-
-            # Calculate the average available memory in GB
-            average_consumed_memory_gb_items =  []
-            average_consumed_memory_gb_during_timespan = 0
-            for metric in memory_data.value:
-                for time_series in metric.timeseries:
-                    for data in time_series.data:
-                        if data.average is not None:
-                            datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
-                            average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
-
-            average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
-            memory_utilization = average_consumed_memory_gb_during_timespan
-
-            # Fetch GPU utilization (if available)
-            gpu_utilization = 0 #TODO
-
-
-            if memory_utilization < 0 : memory_utilization = 0
             self.observations[vm_name] = {
-                'average_cpu_percentage': cpu_utilization,
-                'average_memory_gb': memory_utilization,
-                'average_gpu_percentage': gpu_utilization
-            }
+                    'average_cpu_percentage': cpu_utilization,
+                    'average_memory_gb': memory_utilization,
+                    'average_gpu_percentage': gpu_utilization
+                }
 
-        return self.observations   
+        return self.observations
+
+
+    # def fetch_observations2(self) -> Dict[str, object]:
+    #     subscription_id = self.resource_selectors.get("subscription_id", None)
+    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
+    #     #node_id = self._get_node_id(node_name, resource_group_name)
+
+
+    #     observations = {}
+    #     for resource_name, resource  in self.resources.items():
+    #         vm_id = resource.spec.provider_id.replace('azure://','')
+    #         vm_name = resource.metadata.name
+    #         cpu_utilization = None
+    #         memory_utilization = None
+    #         gpu_utilization = None
+
+    #         instance_memory = self.static_params[resource_name]['instance_memory']
+
+    #         # Fetch CPU utilization
+    #         cpu_data = monitor_client.metrics.list(
+    #             resource_uri=vm_id,
+    #             metricnames='Percentage CPU',
+    #             aggregation=aggregation,
+    #             interval=self.interval,
+    #             timespan=self.timespan
+    #         )
+
+    #         # Calculate the average percentage CPU utilization
+    #         total_cpu_utilization = 0
+    #         data_points = 0
+    #         for metric in cpu_data.value:
+    #             for time_series in metric.timeseries:
+    #                 for data in time_series.data:
+    #                     if data.average is not None:
+    #                         total_cpu_utilization += data.average
+    #                         data_points += 1
+    #         if data_points > 0:
+    #             average_cpu_utilization = total_cpu_utilization / data_points
+    #         else:
+    #             average_cpu_utilization = 0
+    #         cpu_utilization = average_cpu_utilization
+    #         #print(cpu_utilization)
+
+    #         # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
+    #         memory_data = monitor_client.metrics.list(
+    #             resource_uri=vm_id,
+    #             metricnames='Available Memory Bytes',
+    #             aggregation=aggregation,
+    #             interval=self.interval,
+    #             timespan=self.timespan
+    #         )
+            
+            
+    #         # Calculate the total memory allocated to the virtual machine in bytes
+    #         total_memory_allocated = instance_memory
+
+
+    #         # Calculate the average available memory in GB
+    #         average_consumed_memory_gb_items =  []
+    #         average_consumed_memory_gb_during_timespan = 0
+    #         for metric in memory_data.value:
+    #             for time_series in metric.timeseries:
+    #                 for data in time_series.data:
+    #                     if data.average is not None:
+    #                         datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
+    #                         average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
+
+    #         average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
+    #         memory_utilization = average_consumed_memory_gb_during_timespan
+
+    #         # Fetch GPU utilization (if available)
+    #         gpu_utilization = 0 #TODO
+
+
+    #         if memory_utilization < 0 : memory_utilization = 0
+    #         self.observations[vm_name] = {
+    #             'average_cpu_percentage': cpu_utilization,
+    #             'average_memory_gb': memory_utilization,
+    #             'average_gpu_percentage': gpu_utilization
+    #         }
+
+    #     return self.observations   
 
  
 
@@ -169,7 +199,7 @@ class AKSNode(AzureImpactNode):
 
 
     def lookup_static_params(self) -> Dict[str, object]:
-        static_params = {}
+
         for resource_name, resource  in self.resources.items():
             vm_id = resource.spec.provider_id.replace('azure://','')
             vm_name = resource.metadata.name
@@ -177,57 +207,9 @@ class AKSNode(AzureImpactNode):
             vm_sku = resource.metadata.labels.get("beta.kubernetes.io/instance-type", "")
             agent_pool = resource.metadata.labels.get("agentpool", "")
 
-            vm_sku_tdp = 180 #default value for unknown VM SKUs
-
-            #get TDP for the VM sku, from the static data file
-            with open('lib/static_data/azure_vm_tdp.csv', 'r') as f:
-                for line in f:
-                    if vm_sku in line:
-                        vm_sku_tdp = line.split(',')[1]
-                        break
-
-
-            # RR: Resources reserved for use by the software
-            rr = 2  # vCPUs
-
-            # TR: Total number of resources available
-            total_vcpus = 16
-
-            
-            # Load the CSV file
-            with open('lib/static_data/ccf_azure_instances.csv', newline='') as csvfile:
-                reader = csv.DictReader(csvfile)
-                
-                vm_sku_short = vm_sku.split('_')[1]
-                # Find the row that matches the VM series and size
-                for row in reader:
-                    #if row['Series'] == vm_series and row['VM'] == vm_sku:
-                    if row['Virtual Machine'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
-                        # Extract the rr and total_vcpus values
-                        rr = int(row['Instance vCPUs'])
-                        total_vcpus = int(row['Platform vCPUs (highest vCPU possible)'])
-                        instance_memory = int(row['Instance Memory'])
-
-                        break
-
-
-            
-            # TE : Total embodied emissions for the VM hardware
-            te = 1200
-            
-            # Load the CSV file
-            with open('lib/static_data/ccf_coefficients-azure-embodied.csv', newline='') as csvfile:
-                reader = csv.DictReader(csvfile)
-                
-                vm_sku_short = vm_sku.split('_')[1]
-                # Find the row that matches the VM series and size
-                for row in reader:
-                    #if row['Series'] == vm_series and row['VM'] == vm_sku:
-                    if row['type'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
-                        # Extract the rr and total_vcpus values
-                        te = float(row['total'])
-
-                        break
+            vm_sku_tdp = self.get_vm_sku_tdp(vm_sku)
+            rr, total_vcpus, instance_memory = self.get_vm_resources(vm_sku)
+            te = self.get_vm_te(vm_sku)
 
             self.static_params[vm_name] = {
                 'vm_sku': vm_sku,
@@ -236,7 +218,7 @@ class AKSNode(AzureImpactNode):
                 'total_vcpus': total_vcpus,
                 'te': te,
                 'instance_memory': instance_memory
-            }    
+            }
         return self.static_params
 
 
