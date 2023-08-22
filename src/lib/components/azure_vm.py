@@ -48,7 +48,115 @@ class AzureVM(AzureImpactNode):
         return self.resources
 
 
+    def fetch_cpu_memory_utilization(self, vm_id: str, instance_memory: int, monitor_client: MonitorManagementClient) -> Tuple[float, float]:
+        """
+        Fetches the average CPU and memory utilization for a virtual machine.
+
+        :param vm_id: The ID of the virtual machine.
+        :param instance_memory: The amount of memory allocated to the virtual machine in GB.
+        :param monitor_client: The Azure Monitor client.
+        :return: A tuple containing the average CPU utilization and memory utilization in GB.
+        """
+        cpu_memory_data = monitor_client.metrics.list(
+            resource_uri=vm_id,
+            metricnames="Percentage CPU,Available Memory Bytes",
+            aggregation=self.aggregation,
+            interval=self.interval,
+            timespan=self.timespan
+        )
+
+        total_cpu_utilization = 0
+        data_points = 0
+
+        total_memory_allocated = instance_memory
+
+        average_consumed_memory_gb_items = []
+        for metric in cpu_memory_data.value:
+            if metric.name.localized_value == 'Percentage CPU':
+                for time_series in metric.timeseries:
+                    for data in time_series.data:
+                        if data.average is not None:
+                            total_cpu_utilization += data.average
+                            data_points += 1
+            elif metric.name.localized_value in ['Available Memory Bytes', 'Available Memory Bytes (Preview)']:
+                for time_series in metric.timeseries:
+                    for data in time_series.data:
+                        if data.average is not None:
+                            datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3)
+                            average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
+
+        average_cpu_utilization = total_cpu_utilization / data_points if data_points > 0 else 0
+        cpu_utilization = average_cpu_utilization
+
+        average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items) if average_consumed_memory_gb_items else 0
+        memory_utilization = average_consumed_memory_gb_during_timespan
+
+        return cpu_utilization, memory_utilization
+
+
+    def fetch_gpu_utilization(self, resource: object, monitor_client: MonitorManagementClient) -> float:
+        """
+        Fetches the average GPU utilization for a virtual machine.
+
+        :param resource: The virtual machine resource.
+        :param monitor_client: The Azure Monitor client.
+        :return: The average GPU utilization.
+        """
+        gpu_utilization = 0
+        if resource.resources is not None:
+            for extension in resource.resources:
+                if extension.type == 'Microsoft.Compute/virtualMachines/extensions' and extension.name == 'NVIDIA-GPU-Extension':
+                    gpu_data = monitor_client.metrics.list(
+                        resource_uri=extension.id,
+                        metricnames='GPU Utilization',
+                        aggregation=self.aggregation,
+                        interval=self.interval,
+                        timespan=self.timespan
+                    )
+
+                    if gpu_data.value:
+                        total_gpu_utilization = 0
+                        data_points = 0
+                        for metric in gpu_data.value:
+                            for time_series in metric.timeseries:
+                                for data in time_series.data:
+                                    if data.average is not None:
+                                        total_gpu_utilization += data.average
+                                        data_points += 1
+
+                        average_gpu_utilization = total_gpu_utilization / data_points if data_points > 0 else 0
+                        gpu_utilization = average_gpu_utilization
+
+        return gpu_utilization
+
+
     def fetch_observations(self) -> Dict[str, object]:
+        """
+        Fetches a dictionary of metric observations from Azure Monitor.
+
+        :return: A dictionary containing metric observations.
+        """
+        subscription_id = self.resource_selectors.get("subscription_id", None)
+        monitor_client = MonitorManagementClient(self.credential, subscription_id)
+
+        for resource_name, resource in self.resources.items():
+            if resource.type == 'Microsoft.Compute/virtualMachines':
+                vm_id = resource.id
+                vm_name = resource.name
+                instance_memory = self.static_params[resource_name]['instance_memory']
+
+                cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
+                gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client)
+
+                self.observations[vm_name] = {
+                    'average_cpu_percentage': cpu_utilization,
+                    'average_memory_gb': memory_utilization,
+                    'average_gpu_percentage': gpu_utilization
+                }
+
+        return self.observations
+
+    def fetch_observations11(self) -> Dict[str, object]:
         """
         Fetches a dictionary of metric observations from Azure Monitor.
 
@@ -82,14 +190,6 @@ class AzureVM(AzureImpactNode):
 
                 # Calculate the total memory allocated to the virtual machine in GB
                 total_memory_allocated = instance_memory 
-
-                # Calculate the average available memory in GB
-                total_available_memory = 0
-                available_memory_data_points = 0
-
-                # Calculate the average consumed memory in GB
-                total_consumed_memory = 0
-                consumed_memory_data_points = 0
 
                 average_consumed_memory_gb_items =  []
                 average_consumed_memory_gb_during_timespan = 0
@@ -166,122 +266,122 @@ class AzureVM(AzureImpactNode):
 
 
 
-    #def fetch_observations(self, aggregation: str = aggregation, timespan : str = "PT1H", interval: str = "PT15M") -> Dict[str, object]:
-    def fetch_observations1(self) -> Dict[str, object]:
-        """
-        Fetches a dictionary of metric observations from Azure Monitor.
+    # #def fetch_observations(self, aggregation: str = aggregation, timespan : str = "PT1H", interval: str = "PT15M") -> Dict[str, object]:
+    # def fetch_observations1(self) -> Dict[str, object]:
+    #     """
+    #     Fetches a dictionary of metric observations from Azure Monitor.
 
-        :param metric_names: A list of metric names to fetch.
-        :param aggregation: The aggregation type to use.
-        :param interval: The time interval to fetch data for.
-        :return: A dictionary containing metric observations.
-        """
-        subscription_id = self.resource_selectors.get("subscription_id", None)
-        monitor_client = MonitorManagementClient(self.credential, subscription_id)
+    #     :param metric_names: A list of metric names to fetch.
+    #     :param aggregation: The aggregation type to use.
+    #     :param interval: The time interval to fetch data for.
+    #     :return: A dictionary containing metric observations.
+    #     """
+    #     subscription_id = self.resource_selectors.get("subscription_id", None)
+    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
 
-        for resource_name, resource  in self.resources.items():
-            if resource.type == 'Microsoft.Compute/virtualMachines':
-                vm_id = resource.id
-                vm_name = resource.name
-                cpu_utilization = None
-                memory_utilization = None
-                gpu_utilization = None
+    #     for resource_name, resource  in self.resources.items():
+    #         if resource.type == 'Microsoft.Compute/virtualMachines':
+    #             vm_id = resource.id
+    #             vm_name = resource.name
+    #             cpu_utilization = None
+    #             memory_utilization = None
+    #             gpu_utilization = None
 
 
-                instance_memory = self.static_params[resource_name]['instance_memory']
+    #             instance_memory = self.static_params[resource_name]['instance_memory']
 
-                # Fetch CPU utilization
-                cpu_data = monitor_client.metrics.list(
-                    resource_uri=vm_id,
-                    metricnames='Percentage CPU',
-                    aggregation=aggregation,
-                    interval=self.interval,
-                    timespan=self.timespan
-                )
+    #             # Fetch CPU utilization
+    #             cpu_data = monitor_client.metrics.list(
+    #                 resource_uri=vm_id,
+    #                 metricnames='Percentage CPU',
+    #                 aggregation=aggregation,
+    #                 interval=self.interval,
+    #                 timespan=self.timespan
+    #             )
 
-                # Calculate the average percentage CPU utilization
-                total_cpu_utilization = 0
-                data_points = 0
-                for metric in cpu_data.value:
-                    for time_series in metric.timeseries:
-                        for data in time_series.data:
-                            if data.average is not None:
-                                total_cpu_utilization += data.average
-                                data_points += 1
+    #             # Calculate the average percentage CPU utilization
+    #             total_cpu_utilization = 0
+    #             data_points = 0
+    #             for metric in cpu_data.value:
+    #                 for time_series in metric.timeseries:
+    #                     for data in time_series.data:
+    #                         if data.average is not None:
+    #                             total_cpu_utilization += data.average
+    #                             data_points += 1
 
-                if data_points > 0 :
-                    average_cpu_utilization = total_cpu_utilization / data_points
-                else : average_cpu_utilization = 0
-                cpu_utilization = average_cpu_utilization
-                #print(cpu_utilization)
+    #             if data_points > 0 :
+    #                 average_cpu_utilization = total_cpu_utilization / data_points
+    #             else : average_cpu_utilization = 0
+    #             cpu_utilization = average_cpu_utilization
+    #             #print(cpu_utilization)
     
-                # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
-                memory_data = monitor_client.metrics.list(
-                    resource_uri=vm_id,
-                    metricnames='Available Memory Bytes',
-                    aggregation=aggregation,
-                    interval=self.interval,
-                    timespan=self.timespan
-                )
+    #             # Fetch memory utilization (calculte from available memory since there is no metric for used memory in Azure Monitor)
+    #             memory_data = monitor_client.metrics.list(
+    #                 resource_uri=vm_id,
+    #                 metricnames='Available Memory Bytes',
+    #                 aggregation=aggregation,
+    #                 interval=self.interval,
+    #                 timespan=self.timespan
+    #             )
                 
-                # Calculate the total memory allocated to the virtual machine in bytes
-                total_memory_allocated = instance_memory
+    #             # Calculate the total memory allocated to the virtual machine in bytes
+    #             total_memory_allocated = instance_memory
 
 
-                # Calculate the average available memory in GB
-                average_consumed_memory_gb_items =  []
-                average_consumed_memory_gb_during_timespan = 0
-                for metric in memory_data.value:
-                    for time_series in metric.timeseries:
-                        for data in time_series.data:
-                            if data.average is not None:
-                                datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
-                                average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
+    #             # Calculate the average available memory in GB
+    #             average_consumed_memory_gb_items =  []
+    #             average_consumed_memory_gb_during_timespan = 0
+    #             for metric in memory_data.value:
+    #                 for time_series in metric.timeseries:
+    #                     for data in time_series.data:
+    #                         if data.average is not None:
+    #                             datapoint_average_consumed_memory_gb = total_memory_allocated - (data.average / 1024 ** 3) # /1024 ** 3 converts bytes to GB
+    #                             average_consumed_memory_gb_items.append(datapoint_average_consumed_memory_gb)
 
-                if len(average_consumed_memory_gb_items) > 0 :
-                    average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
-                else : average_consumed_memory_gb_during_timespan = 0
-                memory_utilization = average_consumed_memory_gb_during_timespan
+    #             if len(average_consumed_memory_gb_items) > 0 :
+    #                 average_consumed_memory_gb_during_timespan = sum(average_consumed_memory_gb_items) / len(average_consumed_memory_gb_items)
+    #             else : average_consumed_memory_gb_during_timespan = 0
+    #             memory_utilization = average_consumed_memory_gb_during_timespan
 
-                # Fetch GPU utilization (if available)
-                gpu_utilization = 0
-                if resource.resources is not None:
-                    for extension in resource.resources:
-                        # Fetch GPU utilization (if available)
-                        if extension.type == 'Microsoft.Compute/virtualMachines/extensions' and extension.name == 'NVIDIA-GPU-Extension':
-                            gpu_data = monitor_client.metrics.list(
-                                resource_uri=extension.id,
-                                metricnames='GPU Utilization',
-                                aggregation=aggregation,
-                                interval=self.interval,
-                                timespan=self.timespan
-                            )
+    #             # Fetch GPU utilization (if available)
+    #             gpu_utilization = 0
+    #             if resource.resources is not None:
+    #                 for extension in resource.resources:
+    #                     # Fetch GPU utilization (if available)
+    #                     if extension.type == 'Microsoft.Compute/virtualMachines/extensions' and extension.name == 'NVIDIA-GPU-Extension':
+    #                         gpu_data = monitor_client.metrics.list(
+    #                             resource_uri=extension.id,
+    #                             metricnames='GPU Utilization',
+    #                             aggregation=aggregation,
+    #                             interval=self.interval,
+    #                             timespan=self.timespan
+    #                         )
                             
-                            if gpu_data.value:
-                                total_gpu_utilization = 0
-                                data_points = 0
-                                # Calculate the average percentage GPU utilization
-                                for metric in cpu_data.value:
-                                    for time_series in metric.timeseries:
-                                        for data in time_series.data:
-                                            if data.average is not None:
-                                                total_cpu_utilization += data.average
-                                                data_points += 1
+    #                         if gpu_data.value:
+    #                             total_gpu_utilization = 0
+    #                             data_points = 0
+    #                             # Calculate the average percentage GPU utilization
+    #                             for metric in cpu_data.value:
+    #                                 for time_series in metric.timeseries:
+    #                                     for data in time_series.data:
+    #                                         if data.average is not None:
+    #                                             total_cpu_utilization += data.average
+    #                                             data_points += 1
 
-                                if data_points > 0 : 
-                                    average_gpu_utilization = total_gpu_utilization / data_points 
-                                else : 
-                                    average_gpu_utilization = 0
-                                gpu_utilization = average_gpu_utilization
+    #                             if data_points > 0 : 
+    #                                 average_gpu_utilization = total_gpu_utilization / data_points 
+    #                             else : 
+    #                                 average_gpu_utilization = 0
+    #                             gpu_utilization = average_gpu_utilization
 
 
-                self.observations[vm_name] = {
-                    'average_cpu_percentage': cpu_utilization,
-                    'average_memory_gb': memory_utilization,
-                    'average_gpu_percentage': gpu_utilization
-                }
+    #             self.observations[vm_name] = {
+    #                 'average_cpu_percentage': cpu_utilization,
+    #                 'average_memory_gb': memory_utilization,
+    #                 'average_gpu_percentage': gpu_utilization
+    #             }
 
-        return self.observations     
+    #     return self.observations     
 
     def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
         self.fetch_resources()
