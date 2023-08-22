@@ -15,7 +15,7 @@ aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 class AzureVM(AzureImpactNode):
     def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
         super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan)
-        self.type = "azurevm"
+        self.type = "azure.compute.vm"
         self.resources = {}
         self.observations = {}
         self.static_params = {}
@@ -23,8 +23,8 @@ class AzureVM(AzureImpactNode):
     def list_supported_skus(self):
         return ["D3V4"]
     
-    def fetch_resources(self) -> Dict[str, VirtualMachine]:
-        print(self.resource_selectors)
+    def fetch_resources(self) -> Dict[str, object]:
+        #print(self.resource_selectors)
         subscription_id = self.resource_selectors.get("subscription_id", None)
         resource_group = self.resource_selectors.get("resource_group", None) 
         name = self.resource_selectors.get("name", None) 
@@ -68,6 +68,9 @@ class AzureVM(AzureImpactNode):
                 memory_utilization = None
                 gpu_utilization = None
 
+
+                instance_memory = self.static_params[resource_name]['instance_memory']
+
                 # Fetch CPU utilization
                 cpu_data = monitor_client.metrics.list(
                     resource_uri=vm_id,
@@ -103,7 +106,7 @@ class AzureVM(AzureImpactNode):
                 )
                 
                 # Calculate the total memory allocated to the virtual machine in bytes
-                total_memory_allocated = 4  #GB ; TODO: Fetch from VM SKU
+                total_memory_allocated = instance_memory
 
 
                 # Calculate the average available memory in GB
@@ -173,11 +176,12 @@ class AzureVM(AzureImpactNode):
         for resource_name, resource  in self.resources.items():
             if resource.type == 'Microsoft.Compute/virtualMachines':
                 #print(resource.os_profile)
-                print(resource.hardware_profile)
+                #print(resource)
 
                 vm_id = resource.id
                 vm_name = resource.name
                 vm_sku = resource.hardware_profile.vm_size
+
 
                 vm_sku_tdp = 180 #default value for unknown VM SKUs
 
@@ -200,14 +204,19 @@ class AzureVM(AzureImpactNode):
                 with open('lib/static_data/ccf_azure_instances.csv', newline='') as csvfile:
                     reader = csv.DictReader(csvfile)
                     
-                    vm_sku_short = vm_sku.split('_')[1]
+                    #vm_series, vm_size = vm_sku.split('_')[1:3]
+                    #vm_sku_short = f"{vm_series}{vm_size}"
+                    
+                    vm_sku_short = ''.join(vm_sku.split('_')[1:]) # for ds1_V2 => ds1V2
+                    
                     # Find the row that matches the VM series and size
                     for row in reader:
                         #if row['Series'] == vm_series and row['VM'] == vm_sku:
                         if row['Virtual Machine'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
                             # Extract the rr and total_vcpus values
                             rr = int(row['Instance vCPUs'])
-                            total_vcpus = int(row['Platform vCPUs (highest vCPU possible)'])
+                            total_vcpus = float(row['Platform vCPUs (highest vCPU possible)'])
+                            instance_memory = float(row['Instance Memory'])
 
                             break
 
@@ -235,6 +244,7 @@ class AzureVM(AzureImpactNode):
                 'vm_sku_tdp': vm_sku_tdp,
                 'rr': rr,
                 'total_vcpus': total_vcpus,
-                'te': te
+                'te': te,
+                'instance_memory': instance_memory
             }    
         return self.static_params

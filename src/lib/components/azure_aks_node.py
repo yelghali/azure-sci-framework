@@ -9,6 +9,7 @@ from kubernetes.config.kube_config import KubeConfigLoader
 
 import yaml
 import re
+import csv
 
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.mgmt.monitor.models import MetricAggregationType
@@ -21,10 +22,11 @@ aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 class AKSNode(AzureImpactNode):
     def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
         super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan)
-        self.type = "aksnode"
+        self.type = "azure.compute.aks.node"
         self.resources = {}
         self.observations = {}
         self.credential = DefaultAzureCredential()
+        self.static_params = {}
         # Create an instance of AzureManagedIdentityAuthParams to authenticate with Azure using managed identity
 
     def get_auth_token(self):
@@ -45,7 +47,7 @@ class AKSNode(AzureImpactNode):
         return resource_uri
 
 
-    def fetch_resources(self) -> Dict[str, Any]:
+    def fetch_resources(self) -> Dict[str, object]:
         # Load the Kubernetes configuration from the default location
         config.load_kube_config()
 
@@ -75,7 +77,7 @@ class AKSNode(AzureImpactNode):
         self.resources = node_resources
         return node_resources
 
-    def fetch_observations(self) -> Dict[str, Any]:
+    def fetch_observations(self) -> Dict[str, object]:
         subscription_id = self.resource_selectors.get("subscription_id", None)
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
         #node_id = self._get_node_id(node_name, resource_group_name)
@@ -88,6 +90,8 @@ class AKSNode(AzureImpactNode):
             cpu_utilization = None
             memory_utilization = None
             gpu_utilization = None
+
+            instance_memory = self.static_params[resource_name]['instance_memory']
 
             # Fetch CPU utilization
             cpu_data = monitor_client.metrics.list(
@@ -125,7 +129,7 @@ class AKSNode(AzureImpactNode):
             
             
             # Calculate the total memory allocated to the virtual machine in bytes
-            total_memory_allocated = 1  #GB ; TODO: Fetch from VM SKU
+            total_memory_allocated = instance_memory
 
 
             # Calculate the average available memory in GB
@@ -158,11 +162,83 @@ class AKSNode(AzureImpactNode):
 
     def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         self.fetch_resources()
+        self.lookup_static_params()
         self.fetch_observations()
-        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, interval=self.interval, timespan=self.timespan, metadata=self.metadata)
+        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, interval=self.interval, timespan=self.timespan, metadata=self.metadata, static_params=self.static_params)
 
-    def lookup_static_params(self) -> Dict[str, Any]:
-        return {}
+
+
+    def lookup_static_params(self) -> Dict[str, object]:
+        static_params = {}
+        for resource_name, resource  in self.resources.items():
+            vm_id = resource.spec.provider_id.replace('azure://','')
+            vm_name = resource.metadata.name
+
+            vm_sku = resource.metadata.labels.get("beta.kubernetes.io/instance-type", "")
+            agent_pool = resource.metadata.labels.get("agentpool", "")
+
+            vm_sku_tdp = 180 #default value for unknown VM SKUs
+
+            #get TDP for the VM sku, from the static data file
+            with open('lib/static_data/azure_vm_tdp.csv', 'r') as f:
+                for line in f:
+                    if vm_sku in line:
+                        vm_sku_tdp = line.split(',')[1]
+                        break
+
+
+            # RR: Resources reserved for use by the software
+            rr = 2  # vCPUs
+
+            # TR: Total number of resources available
+            total_vcpus = 16
+
+            
+            # Load the CSV file
+            with open('lib/static_data/ccf_azure_instances.csv', newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                
+                vm_sku_short = vm_sku.split('_')[1]
+                # Find the row that matches the VM series and size
+                for row in reader:
+                    #if row['Series'] == vm_series and row['VM'] == vm_sku:
+                    if row['Virtual Machine'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
+                        # Extract the rr and total_vcpus values
+                        rr = int(row['Instance vCPUs'])
+                        total_vcpus = int(row['Platform vCPUs (highest vCPU possible)'])
+                        instance_memory = int(row['Instance Memory'])
+
+                        break
+
+
+            
+            # TE : Total embodied emissions for the VM hardware
+            te = 1200
+            
+            # Load the CSV file
+            with open('lib/static_data/ccf_coefficients-azure-embodied.csv', newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                
+                vm_sku_short = vm_sku.split('_')[1]
+                # Find the row that matches the VM series and size
+                for row in reader:
+                    #if row['Series'] == vm_series and row['VM'] == vm_sku:
+                    if row['type'].replace(" ", "").lower() == vm_sku_short.replace(" ", "").lower():
+                        # Extract the rr and total_vcpus values
+                        te = float(row['total'])
+
+                        break
+
+        self.static_params[vm_name] = {
+            'vm_sku': vm_sku,
+            'vm_sku_tdp': vm_sku_tdp,
+            'rr': rr,
+            'total_vcpus': total_vcpus,
+            'te': te,
+            'instance_memory': instance_memory
+        }    
+        return self.static_params
+
 
     def query_prometheus(self, prometheus_endpoint: str, query: str, timespan: str, interval: str) -> Dict[str, Any]:
         url = f"{prometheus_endpoint}/api/v1/query"

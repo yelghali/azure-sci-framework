@@ -66,12 +66,13 @@ resource_selectors = {
      "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
  }
 
-node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=resource_selectors, metadata=metadata)
+node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=resource_selectors, metadata=metadata, timespan=timespan, interval=interval)
 
 # aggregation = MetricAggregationType.AVERAGE
 
 #print(node)
-node.fetch_resources()
+#node.fetch_resources()
+#node.lookup_static_params()
 
 #print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 
@@ -96,38 +97,40 @@ pod_resource_selectors = {
 
 print(vm.fetch_resources())
 print(vm.lookup_static_params())
-print(vm.fetch_observations())
+#print(vm.fetch_observations())
 
+print(vm.calculate())
 #print(node.fetch_resources())
 
 
 
-#static method
-MetricsExporter.start_http_server(port=8000)
-while(True):
+# # #static method
+# MetricsExporter.start_http_server(port=8000)
+# while(True):
 
-    print(vm.fetch_observations())
-    #print(vm.observations)
-    data = vm.calculate()
+#     print(vm.fetch_observations())
+#     #print(vm.observations)
+#     data = vm.calculate()
 
     
-    exporter = MetricsExporter(data)
-    #exporter.to_csv('metrics.csv')
-    #exporter.to_json('metrics.json')
-    exporter.to_prometheus()
+#     exporter = MetricsExporter(data)
+#     #exporter.to_csv('metrics.csv')
+#     #exporter.to_json('metrics.json')
+#     exporter.to_prometheus()
 
-    node.fetch_observations()
-    data = node.calculate()
-    exporter = MetricsExporter(data)
-    exporter.to_prometheus()
+#     print(node.fetch_observations())
+#     data = node.calculate()
+#     exporter = MetricsExporter(data)
+#     exporter.to_prometheus()
 
 
 
-    # pod.fetch_observations()
-    # data = pod.calculate()
-    # exporter = MetricsExporter(data)
-    # exporter.to_prometheus()
+#     # pod.fetch_observations()
+#     # data = pod.calculate()
+#     # exporter = MetricsExporter(data)
+#     # exporter.to_prometheus()
 
-    time.sleep(2)
+#     #sleep 5 mins 
+#     time.sleep(300)
 
 

@@ -27,10 +27,11 @@ class SCIImpactMetricsInterface(BaseModel):
 
     metadata: Dict[str, str] = {}
     observations: Dict[str, object] = {}
+    static_params: Dict[str, object] = {}
     components: List[Dict[str,'SCIImpactMetricsInterface']] = []
     host_node : Dict[str, 'SCIImpactMetricsInterface'] = {}
 
-    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = [], host_node : dict[str, 'SCIImpactMetricsInterface'] = {}):
+    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, static_params : Dict[str, object] = None ,observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = [], host_node : dict[str, 'SCIImpactMetricsInterface'] = {}):
         
 
         
@@ -47,6 +48,7 @@ class SCIImpactMetricsInterface(BaseModel):
             SCI=metrics.get('SCI'),
             metadata=metadata,
             observations=observations,
+            static_params=static_params,
             components=components_list,
             host_node = host_node,
             timespan = metrics.get('timespan', "PT1H"),
@@ -228,6 +230,7 @@ class AggregatedImpactNodesInterface(ABC):
         }
         aggregated_metadata = {'aggregated': "True"}
         aggregated_observations = {}
+        static_params = {}
         aggregated_components = node_metrics
 
         print(aggregated_metrics)
@@ -236,6 +239,7 @@ class AggregatedImpactNodesInterface(ABC):
             metrics=aggregated_metrics,
             metadata=aggregated_metadata,
             observations=aggregated_observations,
+            static_params=static_params,
             components_list=aggregated_components
         )
         return toto
