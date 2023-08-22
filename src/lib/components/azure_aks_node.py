@@ -42,13 +42,13 @@ class AKSNode(AzureVM):
     def list_supported_skus(self):
         return ["Standard_D2_v2"]
 
-    def _get_node_azure_id(self, node):
-        subscription_id = self.resource_selectors.get("subscription_id", None)
-        resource_group_name = self.resource_selectors.get("resource_group", None)
-        agentpool = node.metadata.labels.get("kubernetes.azure.com/agentpool", None)
-        vm_id = 5
-        resource_uri = f'subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Compute/virtualMachineScaleSets/{agentpool}/virtualMachines/{vm_id}'
-        return resource_uri
+    # def _get_node_azure_id(self, node):
+    #     subscription_id = self.resource_selectors.get("subscription_id", None)
+    #     resource_group_name = self.resource_selectors.get("resource_group", None)
+    #     agentpool = node.metadata.labels.get("kubernetes.azure.com/agentpool", None)
+    #     vm_id = 5
+    #     resource_uri = f'subscriptions/{subscription_id}/resourceGroups/{resource_group_name}/providers/Microsoft.Compute/virtualMachineScaleSets/{agentpool}/virtualMachines/{vm_id}'
+    #     return resource_uri
 
 
     async def fetch_resources(self) -> Dict[str, object]:
@@ -85,24 +85,33 @@ class AKSNode(AzureVM):
     async def fetch_gpu_utilization(self, resource: object, monitor_client: MonitorManagementClient) -> float:
         return 0 #TODO
 
-    def fetch_observations(self) -> Dict[str, object]:
+
+    async def fetch_observations(self) -> Dict[str, object]:
         subscription_id = self.resource_selectors.get("subscription_id", None)
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
         #node_id = self._get_node_id(node_name, resource_group_name)
 
-        for resource_name, resource  in self.resources.items():
-            vm_id = resource.spec.provider_id.replace('azure://','')
-            vm_name = resource.metadata.name
-            cpu_utilization = 0
-            memory_utilization = 0
-            gpu_utilization = 0
+        cpu_memory_tasks = []
+        gpu_tasks = []
+        for resource_name, resource in self.resources.items():
+            if hasattr(resource.spec, 'provider_id'):
+                vm_id = resource.spec.provider_id.replace('azure://','')
+                vm_name = resource.metadata.name
+                instance_memory = self.static_params[resource_name]['instance_memory']
 
-            instance_memory = self.static_params[resource_name]['instance_memory']
+                cpu_memory_tasks.append(asyncio.create_task(self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)))
+                gpu_tasks.append(asyncio.create_task(self.fetch_gpu_utilization(resource, monitor_client)))
 
-            cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
-            gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client) #returns 0 for now ; TOOD
-            
-            self.observations[vm_name] = {
+        cpu_memory_results = await asyncio.gather(*cpu_memory_tasks)
+        gpu_results = await asyncio.gather(*gpu_tasks)
+
+        for i, (resource_name, resource) in enumerate(self.resources.items()):
+            if hasattr(resource.spec, 'provider_id'):
+                vm_name = resource.metadata.name
+                cpu_utilization, memory_utilization = cpu_memory_results[i]
+                gpu_utilization = gpu_results[i] #returns 0 for now ; TOOD
+
+                self.observations[vm_name] = {
                     'average_cpu_percentage': cpu_utilization,
                     'average_memory_gb': memory_utilization,
                     'average_gpu_percentage': gpu_utilization
@@ -110,12 +119,46 @@ class AKSNode(AzureVM):
 
         return self.observations
 
+
+
+    # def fetch_observations1(self) -> Dict[str, object]:
+    #     subscription_id = self.resource_selectors.get("subscription_id", None)
+    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
+    #     #node_id = self._get_node_id(node_name, resource_group_name)
+
+    #     for resource_name, resource  in self.resources.items():
+    #         vm_id = resource.spec.provider_id.replace('azure://','')
+    #         vm_name = resource.metadata.name
+    #         cpu_utilization = 0
+    #         memory_utilization = 0
+    #         gpu_utilization = 0
+
+    #         instance_memory = self.static_params[resource_name]['instance_memory']
+
+    #         cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
+    #         gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client) #returns 0 for now ; TOOD
+            
+    #         self.observations[vm_name] = {
+    #                 'average_cpu_percentage': cpu_utilization,
+    #                 'average_memory_gb': memory_utilization,
+    #                 'average_gpu_percentage': gpu_utilization
+    #             }
+
+    #     return self.observations
+
  
 
-    def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        #self.fetch_resources()
-        self.lookup_static_params()
-        self.fetch_observations()
+    async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
+        # if self.resources == {}: call fetch_resources
+        if self.resources == {} or self.resources == None:
+            await self.fetch_resources()
+        # if self.static_params == {}: call lookup_static_params
+        if self.static_params == {} or self.static_params == None:
+            await self.lookup_static_params()
+
+        #always get updated observations
+        await self.fetch_observations()
+
         return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, interval=self.interval, timespan=self.timespan, metadata=self.metadata, static_params=self.static_params)
 
 
@@ -155,28 +198,28 @@ class AKSNode(AzureVM):
         return self.static_params
 
 
-    def lookup_static_params1(self) -> Dict[str, object]:
+    # def lookup_static_params1(self) -> Dict[str, object]:
 
-        for resource_name, resource  in self.resources.items():
-            vm_id = resource.spec.provider_id.replace('azure://','')
-            vm_name = resource.metadata.name
+    #     for resource_name, resource  in self.resources.items():
+    #         vm_id = resource.spec.provider_id.replace('azure://','')
+    #         vm_name = resource.metadata.name
 
-            vm_sku = resource.metadata.labels.get("beta.kubernetes.io/instance-type", "")
-            agent_pool = resource.metadata.labels.get("agentpool", "")
+    #         vm_sku = resource.metadata.labels.get("beta.kubernetes.io/instance-type", "")
+    #         agent_pool = resource.metadata.labels.get("agentpool", "")
 
-            vm_sku_tdp = self.get_vm_sku_tdp(vm_sku)
-            rr, total_vcpus, instance_memory = self.get_vm_resources(vm_sku)
-            te = self.get_vm_te(vm_sku)
+    #         vm_sku_tdp = self.get_vm_sku_tdp(vm_sku)
+    #         rr, total_vcpus, instance_memory = self.get_vm_resources(vm_sku)
+    #         te = self.get_vm_te(vm_sku)
 
-            self.static_params[vm_name] = {
-                'vm_sku': vm_sku,
-                'vm_sku_tdp': vm_sku_tdp,
-                'rr': rr,
-                'total_vcpus': total_vcpus,
-                'te': te,
-                'instance_memory': instance_memory
-            }
-        return self.static_params
+    #         self.static_params[vm_name] = {
+    #             'vm_sku': vm_sku,
+    #             'vm_sku_tdp': vm_sku_tdp,
+    #             'rr': rr,
+    #             'total_vcpus': total_vcpus,
+    #             'te': te,
+    #             'instance_memory': instance_memory
+    #         }
+    #     return self.static_params
 
 
     def query_prometheus(self, prometheus_endpoint: str, query: str, timespan: str, interval: str) -> Dict[str, Any]:
