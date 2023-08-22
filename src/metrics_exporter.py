@@ -38,7 +38,7 @@ vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),
 print(vm.fetch_resources())
 print(vm.lookup_static_params())
 
-#print(vm.fetch_observations())
+print(vm.fetch_observations())
 #print(vm.calculate())
 
 manual_observations = {
@@ -71,12 +71,12 @@ node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbo
 # aggregation = MetricAggregationType.AVERAGE
 
 #print(node)
-node.fetch_resources()
-print(node.lookup_static_params())
+# node.fetch_resources()
+# print(node.lookup_static_params())
 
-#print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
+# #print(node.fetch_observations(interval="PT15M", timespan="PT1H"))
 
-print(node.calculate())
+# print(node.calculate())
 
 
 pod_resource_selectors = {
@@ -105,32 +105,32 @@ pod_resource_selectors = {
 
 
 # #static method
-MetricsExporter.start_http_server(port=8000)
-while(True):
+# MetricsExporter.start_http_server(port=8000)
+# while(True):
 
-    print(vm.fetch_observations())
-    #print(vm.observations)
-    data = vm.calculate()
+#     print(vm.fetch_observations())
+#     #print(vm.observations)
+#     data = vm.calculate()
 
     
-    exporter = MetricsExporter(data)
-    #exporter.to_csv('metrics.csv')
-    #exporter.to_json('metrics.json')
-    exporter.to_prometheus()
+#     exporter = MetricsExporter(data)
+#     #exporter.to_csv('metrics.csv')
+#     #exporter.to_json('metrics.json')
+#     exporter.to_prometheus()
 
-    print(node.fetch_observations())
-    data = node.calculate()
-    exporter = MetricsExporter(data)
-    exporter.to_prometheus()
+#     print(node.fetch_observations())
+#     data = node.calculate()
+#     exporter = MetricsExporter(data)
+#     exporter.to_prometheus()
 
 
 
-    # pod.fetch_observations()
-    # data = pod.calculate()
-    # exporter = MetricsExporter(data)
-    # exporter.to_prometheus()
+#     # pod.fetch_observations()
+#     # data = pod.calculate()
+#     # exporter = MetricsExporter(data)
+#     # exporter.to_prometheus()
 
-    #sleep 5 mins 
-    time.sleep(300)
+#     #sleep 5 mins 
+#     time.sleep(300)
 
 
