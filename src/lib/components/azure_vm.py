@@ -166,8 +166,9 @@ class AzureVM(AzureImpactNode):
 
     def calculate(self, carbon_intensity = 100) -> dict[str : SCIImpactMetricsInterface]:
         self.fetch_resources()
-        self.fetch_observations()
         self.lookup_static_params()
+        self.fetch_observations()
+
         return self.inner_model.calculate(observations=self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata, static_params=self.static_params)
 
     def lookup_static_params(self) -> Dict[str, object]:
@@ -208,7 +209,7 @@ class AzureVM(AzureImpactNode):
                     #vm_sku_short = f"{vm_series}{vm_size}"
                     
                     vm_sku_short = ''.join(vm_sku.split('_')[1:]) # for ds1_V2 => ds1V2
-                    
+
                     # Find the row that matches the VM series and size
                     for row in reader:
                         #if row['Series'] == vm_series and row['VM'] == vm_sku:

@@ -229,14 +229,14 @@ class AKSNode(AzureImpactNode):
 
                         break
 
-        self.static_params[vm_name] = {
-            'vm_sku': vm_sku,
-            'vm_sku_tdp': vm_sku_tdp,
-            'rr': rr,
-            'total_vcpus': total_vcpus,
-            'te': te,
-            'instance_memory': instance_memory
-        }    
+            self.static_params[vm_name] = {
+                'vm_sku': vm_sku,
+                'vm_sku_tdp': vm_sku_tdp,
+                'rr': rr,
+                'total_vcpus': total_vcpus,
+                'te': te,
+                'instance_memory': instance_memory
+            }    
         return self.static_params
 
 
