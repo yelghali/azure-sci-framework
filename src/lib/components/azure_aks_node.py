@@ -91,6 +91,14 @@ class AKSNode(AzureVM):
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
         #node_id = self._get_node_id(node_name, resource_group_name)
 
+        if self.resources == {} or self.resources == None: await self.fetch_resources()
+        if self.static_params == {} or self.static_params == None: await self.lookup_static_params()
+
+        # Create a semaphore with an initial value of 3
+        semaphore = asyncio.Semaphore(3) # to avoid throttling ; this is the max number of concurrent queries for Azure Monitor
+
+
+
         cpu_memory_tasks = []
         gpu_tasks = []
         for resource_name, resource in self.resources.items():
@@ -99,7 +107,7 @@ class AKSNode(AzureVM):
                 vm_name = resource.metadata.name
                 instance_memory = self.static_params[resource_name]['instance_memory']
 
-                cpu_memory_tasks.append(asyncio.create_task(self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)))
+                cpu_memory_tasks.append(asyncio.create_task(self.fetch_cpu_memory_utilization(semaphore, vm_id, instance_memory, monitor_client)))
                 gpu_tasks.append(asyncio.create_task(self.fetch_gpu_utilization(resource, monitor_client)))
 
         cpu_memory_results = await asyncio.gather(*cpu_memory_tasks)
@@ -119,33 +127,6 @@ class AKSNode(AzureVM):
 
         return self.observations
 
-
-
-    # def fetch_observations1(self) -> Dict[str, object]:
-    #     subscription_id = self.resource_selectors.get("subscription_id", None)
-    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
-    #     #node_id = self._get_node_id(node_name, resource_group_name)
-
-    #     for resource_name, resource  in self.resources.items():
-    #         vm_id = resource.spec.provider_id.replace('azure://','')
-    #         vm_name = resource.metadata.name
-    #         cpu_utilization = 0
-    #         memory_utilization = 0
-    #         gpu_utilization = 0
-
-    #         instance_memory = self.static_params[resource_name]['instance_memory']
-
-    #         cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
-    #         gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client) #returns 0 for now ; TOOD
-            
-    #         self.observations[vm_name] = {
-    #                 'average_cpu_percentage': cpu_utilization,
-    #                 'average_memory_gb': memory_utilization,
-    #                 'average_gpu_percentage': gpu_utilization
-    #             }
-
-    #     return self.observations
-
  
 
     async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
@@ -163,6 +144,9 @@ class AKSNode(AzureVM):
 
 
     async def lookup_static_params(self) -> Dict[str, object]:
+
+        if self.resources == {} or self.resources == None: await self.fetch_resources()
+
         # Create a list of coroutines to run concurrently using a list comprehension
         coroutines = [
             (

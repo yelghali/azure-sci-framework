@@ -9,6 +9,7 @@ from azure.mgmt.monitor.models import MetricAggregationType
 
 import csv
 
+import time
 import asyncio
 
 import itertools
@@ -52,7 +53,7 @@ class AzureVM(AzureImpactNode):
         return self.resources
 
 
-    async def fetch_cpu_memory_utilization(self, vm_id: str, instance_memory: int, monitor_client: MonitorManagementClient) -> Tuple[float, float]:
+    async def fetch_cpu_memory_utilization(self, semaphore, vm_id: str, instance_memory: int, monitor_client: MonitorManagementClient) -> Tuple[float, float]:
         """
         Fetches the average CPU and memory utilization for a virtual machine.
 
@@ -61,13 +62,24 @@ class AzureVM(AzureImpactNode):
         :param monitor_client: The Azure Monitor client.
         :return: A tuple containing the average CPU utilization and memory utilization in GB.
         """
-        cpu_memory_data = monitor_client.metrics.list(
-            resource_uri=vm_id,
-            metricnames="Percentage CPU,Available Memory Bytes",
-            aggregation=self.aggregation,
-            interval=self.interval,
-            timespan=self.timespan
-        )
+
+        # Acquire the semaphore before running the query
+        async with semaphore:
+            retry_count = 0
+            while retry_count < 7:
+                try:
+                    cpu_memory_data = monitor_client.metrics.list(
+                        resource_uri=vm_id,
+                        metricnames="Percentage CPU,Available Memory Bytes",
+                        aggregation=self.aggregation,
+                        interval=self.interval,
+                        timespan=self.timespan
+                    )
+                    break
+                except:
+                    retry_count += 1
+                    await asyncio.sleep(5 ** retry_count)
+                    continue
 
         total_cpu_utilization = 0
         data_points = 0
@@ -143,7 +155,11 @@ class AzureVM(AzureImpactNode):
         subscription_id = self.resource_selectors.get("subscription_id", None)
         monitor_client = MonitorManagementClient(self.credential, subscription_id)
 
-        await self.fetch_resources()
+        if self.resources == {} or self.resources == None: await self.fetch_resources()
+        if self.static_params == {} or self.static_params == None: await self.lookup_static_params()
+
+        # Create a semaphore with an initial value of 3
+        semaphore = asyncio.Semaphore(3) # to avoid throttling ; this is the max number of concurrent queries for Azure Monitor
 
         tasks = []
         resource_names = []
@@ -153,7 +169,7 @@ class AzureVM(AzureImpactNode):
                 vm_name = resource.name
                 instance_memory = self.static_params[resource_name]['instance_memory']
 
-                task = asyncio.create_task(self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client))
+                task = asyncio.create_task(self.fetch_cpu_memory_utilization(semaphore, vm_id, instance_memory, monitor_client))
                 tasks.append(task)
 
                 task = asyncio.create_task(self.fetch_gpu_utilization(resource, monitor_client))
@@ -175,34 +191,6 @@ class AzureVM(AzureImpactNode):
             }
 
         return self.observations
-
-
-
-    # def fetch_observations1(self) -> Dict[str, object]:
-    #     """
-    #     Fetches a dictionary of metric observations from Azure Monitor.
-
-    #     :return: A dictionary containing metric observations.
-    #     """
-    #     subscription_id = self.resource_selectors.get("subscription_id", None)
-    #     monitor_client = MonitorManagementClient(self.credential, subscription_id)
-
-    #     for resource_name, resource in self.resources.items():
-    #         if resource.type == 'Microsoft.Compute/virtualMachines':
-    #             vm_id = resource.id
-    #             vm_name = resource.name
-    #             instance_memory = self.static_params[resource_name]['instance_memory']
-
-    #             cpu_utilization, memory_utilization = self.fetch_cpu_memory_utilization(vm_id, instance_memory, monitor_client)
-    #             gpu_utilization = self.fetch_gpu_utilization(resource, monitor_client)
-
-    #             self.observations[vm_name] = {
-    #                 'average_cpu_percentage': cpu_utilization,
-    #                 'average_memory_gb': memory_utilization,
-    #                 'average_gpu_percentage': gpu_utilization
-    #             }
-
-    #     return self.observations
 
  
 
@@ -262,6 +250,9 @@ class AzureVM(AzureImpactNode):
 
 
     async def lookup_static_params(self) -> Dict[str, object]:
+
+        if self.resources == {} or self.resources == None: await self.fetch_resources()
+
         # Create a list of coroutines to run concurrently using a list comprehension
         coroutines = [
             (
@@ -298,27 +289,5 @@ class AzureVM(AzureImpactNode):
 
         return self.static_params
 
-
-    # async def lookup_static_params1(self) -> Dict[str, object]:
-    #     # Get static parameters for each VM resource
-    #     for resource_name, resource in self.resources.items():
-    #         if resource.type == 'Microsoft.Compute/virtualMachines':
-    #             vm_id = resource.id
-    #             vm_name = resource.name
-    #             vm_sku = resource.hardware_profile.vm_size
-
-    #             vm_sku_tdp = await self.get_vm_sku_tdp(vm_sku)
-    #             rr, total_vcpus, instance_memory = await self.get_vm_resources(vm_sku)
-    #             te = await self.get_vm_te(vm_sku)
-
-    #             self.static_params[vm_name] = {
-    #                 'vm_sku': vm_sku,
-    #                 'vm_sku_tdp': vm_sku_tdp,
-    #                 'rr': rr,
-    #                 'total_vcpus': total_vcpus,
-    #                 'te': te,
-    #                 'instance_memory': instance_memory
-    #             }
-    #     return self.static_params
 
 

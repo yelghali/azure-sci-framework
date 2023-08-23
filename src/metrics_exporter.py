@@ -111,9 +111,7 @@ async def process_impact_node(impact_node: ImpactNodeInterface, stop_event: asyn
     # fetch the observations and calculate + export the impact every 5 minutes
     while not stop_event.is_set():
 
-        # fetch the observations and calculate the impact
-        await impact_node.fetch_observations()
-        
+        # fetch the observations and calculate the impact ; when running calculate, the observations are fetched again        
         impact_metrics = await impact_node.calculate()
 
         print(impact_metrics)
