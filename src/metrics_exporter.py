@@ -80,25 +80,25 @@ node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbo
 # print(node.calculate())
 
 
-#async def main1():
-    # toto = await vm.fetch_resources()
-    # print(toto)
-    # tata = await vm.lookup_static_params()
-    # print(tata)
+# async def main1():
+#     # toto = await vm.fetch_resources()
+#     # print(toto)
+#     # tata = await vm.lookup_static_params()
+#     # print(tata)
 
 
-    # #tutu = await vm.fetch_observations()
-    # #print(tutu)
-    # uuu = await vm.calculate()
-    # print(uuu)
+#     # #tutu = await vm.fetch_observations()
+#     # #print(tutu)
+#     # uuu = await vm.calculate()
+#     # print(uuu)
 
-    # await node.fetch_resources()
-    # toto = await node.lookup_static_params()
-    # print(toto)
-    # tutu = await node.fetch_observations()
-    # print(tutu)
-    # uuu = await node.calculate()
-    # print(uuu)
+#     await node.fetch_resources()
+#     toto = await node.lookup_static_params()
+#     print(toto)
+#     tutu = await node.fetch_observations()
+#     print(tutu)
+#     uuu = await node.calculate()
+#     print(uuu)
 
 # if __name__ == '__main__':
 #     asyncio.run(main1())

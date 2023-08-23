@@ -16,8 +16,8 @@ services:
       dockerfile: ief-metrics-exporter-Dockerfile
     ports:
       - "8000:8000"
-    volumes:
-      - ./kubeconfig:/root/.kube/config
+    #volumes:
+    #  - ./kubeconfig:/root/.kube/config
     env_file:
       - .env
 

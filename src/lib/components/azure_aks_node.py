@@ -10,6 +10,8 @@ from kubernetes.config.kube_config import KubeConfigLoader
 import yaml
 import re
 import csv
+import os
+import io
 
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.mgmt.monitor.models import MetricAggregationType
@@ -52,15 +54,31 @@ class AKSNode(AzureVM):
 
 
     async def fetch_resources(self) -> Dict[str, object]:
-        # Load the Kubernetes configuration from the default location
-        config.load_kube_config()
+        subscription_id = self.resource_selectors.get("subscription_id", None)
+        resource_group_name = self.resource_selectors.get("resource_group", None)
+        cluster_name = self.resource_selectors.get("cluster_name", None)
+        container_service_client = ContainerServiceClient(self.credential, subscription_id)
+        
+        kubeconfig = container_service_client.managed_clusters.list_cluster_user_credentials(resource_group_name, cluster_name).kubeconfigs[0].value
+
+        kubeconfig_stream = io.BytesIO(kubeconfig)
+        kubeconfig_dict = yaml.safe_load(kubeconfig_stream)
+        
+
+        # Get the name of the current context and cluster from the kubeconfig dict
+        #current_context = kubeconfig_dict["current-context"]
+        #current_cluster = kubeconfig_dict["contexts"][0]["context"]["cluster"]
+
+
+        # Load the Kubernetes configuration from the kubeconfig
+        loader = KubeConfigLoader(config_dict=kubeconfig_dict)
+        configuration = client.Configuration()
+        loader.load_and_set(configuration)
+        client.Configuration.set_default(configuration)
 
         # Create a Kubernetes API client for the CoreV1Api
         api_client = client.CoreV1Api()
 
-        # Get the name of the current context and cluster from the Kubernetes configuration file
-        current_context = config.list_kube_config_contexts()[1]
-        current_cluster = current_context['context']['cluster']
 
         # Query the Kubernetes API server for the list of nodes in the cluster
         if "nodepool_name" in self.resource_selectors:
