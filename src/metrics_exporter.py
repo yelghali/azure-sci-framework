@@ -31,29 +31,29 @@ metadata = {
 timespan = "PT1H"
 interval = "PT5M"
 
-vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  
-             carbon_intensity_provider=None, 
-             auth_object=auth_params, 
-             resource_selectors=vm_resource_selectors, 
-             metadata=metadata,
-             timespan=timespan,
-             interval=interval)
+# vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  
+#              carbon_intensity_provider=None, 
+#              auth_object=auth_params, 
+#              resource_selectors=vm_resource_selectors, 
+#              metadata=metadata,
+#              timespan=timespan,
+#              interval=interval)
 
 
-manual_observations = {
-     "node_host_cpu_util_percent" : 50,
-     "node_host_memory_util_percent" : 50,
-     "node_host_gpu_util_percent" : 50
- }
+# manual_observations = {
+#      "node_host_cpu_util_percent" : 50,
+#      "node_host_memory_util_percent" : 50,
+#      "node_host_gpu_util_percent" : 50
+#  }
 
-workload = AttributedImpactNodeInterface(name = "myworkload", 
-                                          host_node=vm, 
-                                          carbon_intensity_provider=None, 
-                                          metadata=metadata, 
-                                          observations=manual_observations,
-                                          timespan=timespan,
-                                          interval=interval)
-#print(workload.calculate())
+# workload = AttributedImpactNodeInterface(name = "myworkload", 
+#                                           host_node=vm, 
+#                                           carbon_intensity_provider=None, 
+#                                           metadata=metadata, 
+#                                           observations=manual_observations,
+#                                           timespan=timespan,
+#                                           interval=interval)
+# #print(workload.calculate())
 
 
 
@@ -114,8 +114,8 @@ async def main1():
 
     pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
 
-    print(pod.fetch_resources())
-    print (pod.fetch_observations())
+    await pod.fetch_resources()
+    await pod.fetch_observations()
     ttoto = await pod.calculate()
     print(ttoto)
 

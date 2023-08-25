@@ -74,7 +74,7 @@ class AKSPod(AzureImpactNode):
 
             return response.json()
 
-        def fetch_resources(self) -> Dict[str, Any]:
+        async def fetch_resources(self) -> Dict[str, Any]:
 
             subscription_id = self.resource_selectors.get("subscription_id", None)
             resource_group_name = self.resource_selectors.get("resource_group", None)
@@ -126,7 +126,7 @@ class AKSPod(AzureImpactNode):
             return self.resources
         
 
-        def fetch_observations(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
+        async def fetch_observations(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
             self.subscription_id = self.resource_selectors.get("subscription_id", None)
             self.resource_group_name = self.resource_selectors.get("resource_group", None)
             monitor_client = MonitorManagementClient(self.credential, self.subscription_id)
@@ -159,13 +159,10 @@ class AKSPod(AzureImpactNode):
             #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) * 100'            #node_metrics = self.prom_client.query_range(query=node_query, start=self.start_time, end=self.end_time, step=self.step_size)
             pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total[{timespan}])) * 100'           
             #sum by (pod, node) (rate(container_cpu_usage_seconds_total{pod=~"{pod_names}"}[1m])) / on (node) group_left sum by (node) (rate(node_cpu_seconds_total[1m])) * 100
-            
-            print(pod_node_cpu_usage)
-            
+                        
             pod_node_cpu_usage_metrics = self.query_prometheus(self.prometheus_endpoint, pod_node_cpu_usage, interval, timespan)
                             # Process the results
 
-            print(pod_node_cpu_usage_metrics)
             # Check if the query was successful
             if pod_node_cpu_usage_metrics['status'] == 'success':
                 # Get the data from the result
@@ -258,9 +255,10 @@ class AKSPod(AzureImpactNode):
                     "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
                 }
                 node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=None, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
+                node_impact_dict = await node.calculate() # get the impact metrics of the node
                 #node.fetch_resources()
                 #node.fetch_observations()
-                node_impact_metrics[node_name] = node
+                node_impact_metrics[node_name] = node_impact_dict
             
 
             pods_impact = {}
@@ -268,10 +266,12 @@ class AKSPod(AzureImpactNode):
                 node_name = pod['node_name']
                 pod_name = pod['name']
                 pod_impact_object = AttributedImpactNodeInterface(name = pod_name,
-                                                                    host_node = node_impact_metrics[node_name],
+                                                                    host_node_impact_dict= node_impact_metrics[node_name],
                                                                     carbon_intensity_provider=None,
                                                                     metadata=self.metadata,
-                                                                    observations=pod_observations[pod_name])
+                                                                    observations=pod_observations[pod_name],
+                                                                    timespan=self.timespan,
+                                                                    interval=self.interval)
                 res = await pod_impact_object.calculate() # get the impact metrics of the pod
                 pods_impact[pod_name] = res[pod_name]  or {} # get the impact metrics of the pod
 

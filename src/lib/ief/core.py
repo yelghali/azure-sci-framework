@@ -247,7 +247,7 @@ class AggregatedImpactNodesInterface(ABC):
 
 class AttributedImpactNodeInterface(ABC):
 
-    def __init__(self, name, host_node : ImpactNodeInterface = None, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None, interval : str = "PT5M", timespan : str = "PT1H"):
+    def __init__(self, name, host_node_impact_dict : dict = {}, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None, interval : str = "PT5M", timespan : str = "PT1H"):
         self.type = "attributedimpactnode"
         self.inner_model = "attributedimpactfromnode" #not using a model for now, using attribute_impact_from_host_node func
         self.carbon_intensity_provider = carbon_intensity_provider
@@ -256,7 +256,7 @@ class AttributedImpactNodeInterface(ABC):
         self.metadata = metadata
         self.resources = None
         self.observations = observations
-        self.host_node = host_node
+        self.host_node_impact_dict = host_node_impact_dict
         self.name = name if name is not None else "attributedimpactnode"
         self.interval = interval
         self.timespan = timespan
@@ -288,9 +288,14 @@ class AttributedImpactNodeInterface(ABC):
             'M': float(M),
             'SCI': float(SCI)
         }
-        metadata = {'attributed': "True", "host_node_name": self.host_node.name}
+
+        host_node_name = list(self.host_node_impact_dict.keys())[0]
+
+
+        metadata = {'attributed': "True", "host_node_name": host_node_name}
         components = []
         static_params = {}
+
 
         toto = {}
         toto[self.name] = SCIImpactMetricsInterface(
@@ -299,12 +304,12 @@ class AttributedImpactNodeInterface(ABC):
             observations=observations,
             components_list=components,
             static_params=static_params,
-            host_node={self.host_node.name : host_impact}
+            host_node={host_node_name: host_impact}
         )
         return toto
 
     async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        if self.host_node is None:
+        if self.host_node_impact_dict is None:
             raise ValueError('Host node is not set')
         
         if self.observations is None:
@@ -312,13 +317,13 @@ class AttributedImpactNodeInterface(ABC):
         
         #await self.host_node.fetch_resources()
 
-        self.host_node.interval = self.interval
-        self.host_node.timespan = self.timespan
+        #self.host_node.interval = self.interval
+        #self.host_node.timespan = self.timespan
         #await self.host_node.fetch_observations()
 
-        host_impact_dict = await self.host_node.calculate(carbon_intensity=carbon_intensity)
+        #host_impact_dict = await self.host_node.calculate(carbon_intensity=carbon_intensity)
 
-        host_impact = list(host_impact_dict.values())[0]
+        host_impact = list(self.host_node_impact_dict.values())[0]
 
         node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity)
         return node_metric
