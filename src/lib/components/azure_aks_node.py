@@ -24,6 +24,7 @@ import itertools
 
 aggregation = MetricAggregationType.AVERAGE #for monitoring queries
 
+semaphore_max = 5 # to avoid throttling ; this is the max number of concurrent queries for Azure Monitor
 
 class AKSNode(AzureVM):
     def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H"):
@@ -113,7 +114,7 @@ class AKSNode(AzureVM):
         if self.static_params == {} or self.static_params == None: await self.lookup_static_params()
 
         # Create a semaphore with an initial value of 3
-        semaphore = asyncio.Semaphore(3) # to avoid throttling ; this is the max number of concurrent queries for Azure Monitor
+        semaphore = asyncio.Semaphore(semaphore_max) # to avoid throttling ; this is the max number of concurrent queries for Azure Monitor
 
 
 

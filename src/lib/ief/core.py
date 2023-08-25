@@ -127,20 +127,20 @@ class ImpactNodeInterface(ABC):
         pass
 
     @abstractmethod    
-    def fetch_resources(self) -> Dict[str, object]:
+    async def fetch_resources(self) -> Dict[str, object]:
         #using label selectors, fetch resources from cloud provider
         pass
 
     @abstractmethod
-    def fetch_observations(self) -> Dict[str, object]:
+    async def fetch_observations(self) -> Dict[str, object]:
         #using label selectors, fetch observation from cloud provider
         pass
 
-    def lookup_static_params(self) -> Dict[str, object]:
+    async def lookup_static_params(self) -> Dict[str, object]:
         #lookup the static params for the model, corresponding to the fetched resources
         pass
 
-    def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
+    async def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         self.fetch_resources()
         self.fetch_observations()
         return self.inner_model.calculate(observations=self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, interval= self.interval, metadata=self.metadata)
@@ -290,6 +290,7 @@ class AttributedImpactNodeInterface(ABC):
         }
         metadata = {'attributed': "True", "host_node_name": self.host_node.name}
         components = []
+        static_params = {}
 
         toto = {}
         toto[self.name] = SCIImpactMetricsInterface(
@@ -297,24 +298,25 @@ class AttributedImpactNodeInterface(ABC):
             metadata=metadata,
             observations=observations,
             components_list=components,
+            static_params=static_params,
             host_node={self.host_node.name : host_impact}
         )
         return toto
 
-    def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
+    async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         if self.host_node is None:
             raise ValueError('Host node is not set')
         
         if self.observations is None:
             raise ValueError('Observations are not set')
         
-        self.host_node.fetch_resources()
+        #await self.host_node.fetch_resources()
 
         self.host_node.interval = self.interval
         self.host_node.timespan = self.timespan
-        self.host_node.fetch_observations()
+        #await self.host_node.fetch_observations()
 
-        host_impact_dict = self.host_node.calculate(carbon_intensity=carbon_intensity)
+        host_impact_dict = await self.host_node.calculate(carbon_intensity=carbon_intensity)
 
         host_impact = list(host_impact_dict.values())[0]
 

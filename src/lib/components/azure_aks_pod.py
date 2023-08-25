@@ -11,6 +11,8 @@ from kubernetes.config.kube_config import KubeConfigLoader
 
 import yaml
 import re
+import io
+
 
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.mgmt.monitor.models import MetricAggregationType
@@ -76,8 +78,22 @@ class AKSPod(AzureImpactNode):
 
             subscription_id = self.resource_selectors.get("subscription_id", None)
             resource_group_name = self.resource_selectors.get("resource_group", None)
+            cluster_name = self.resource_selectors.get("cluster_name", None)
 
-            config.load_kube_config()
+            container_service_client = ContainerServiceClient(self.credential, subscription_id)
+            
+            kubeconfig = container_service_client.managed_clusters.list_cluster_user_credentials(resource_group_name, cluster_name).kubeconfigs[0].value
+
+            kubeconfig_stream = io.BytesIO(kubeconfig)
+            kubeconfig_dict = yaml.safe_load(kubeconfig_stream)
+            
+
+            # Load the Kubernetes configuration from the kubeconfig
+            loader = KubeConfigLoader(config_dict=kubeconfig_dict)
+            configuration = client.Configuration()
+            loader.load_and_set(configuration)
+            client.Configuration.set_default(configuration)
+            
             v1 = client.CoreV1Api()
             pod_list = []
 
@@ -135,13 +151,21 @@ class AKSPod(AzureImpactNode):
             pod_names = '|'.join( pod['name'] for pod in pod_list)
 
             # Define the Prometheus query to get the CPU usage of pods by node
-            pod_node_cpu_usage = f'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{{pod=~"{pod_names}"}}) by (pod)'
+            #pod_node_cpu_usage = f'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{{pod=~"{pod_names}"}}) by (pod)'
+            
+            #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}["{timespan}"])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}["{timespan}"])) * 100'
+            #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{job="node-exporter"}}[{timespan}])) * 100'
 
-
-            #node_metrics = self.prom_client.query_range(query=node_query, start=self.start_time, end=self.end_time, step=self.step_size)
+            #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) * 100'            #node_metrics = self.prom_client.query_range(query=node_query, start=self.start_time, end=self.end_time, step=self.step_size)
+            pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total[{timespan}])) * 100'           
+            #sum by (pod, node) (rate(container_cpu_usage_seconds_total{pod=~"{pod_names}"}[1m])) / on (node) group_left sum by (node) (rate(node_cpu_seconds_total[1m])) * 100
+            
+            print(pod_node_cpu_usage)
+            
             pod_node_cpu_usage_metrics = self.query_prometheus(self.prometheus_endpoint, pod_node_cpu_usage, interval, timespan)
                             # Process the results
 
+            print(pod_node_cpu_usage_metrics)
             # Check if the query was successful
             if pod_node_cpu_usage_metrics['status'] == 'success':
                 # Get the data from the result
@@ -150,12 +174,15 @@ class AKSPod(AzureImpactNode):
                 # Iterate over each pod in the data
                 for pod in data:
                     # Get the pod name and CPU usage
-                    pod_name = pod['metric']['pod']
+                    if 'pod' not in pod['metric']:
+                        pod_name = "non_pod_cpu_usage"
+                    else:
+                        pod_name = pod['metric']['pod']
                     cpu_usage = pod['value'][1]
 
                     # Print the pod name and CPU usage
                     print(f'Pod: {pod_name}, CPU Usage: {cpu_usage}')
-                    cpu_utilization[pod_name] = cpu_usage
+                    cpu_utilization[pod_name] = float(cpu_usage)
             else:
                 # The query was not successful
                 print('The query failed')
@@ -163,7 +190,11 @@ class AKSPod(AzureImpactNode):
 
 
             # Define the Prometheus query to get the memory usage of pods by node
-            pod_node_memory_usage = f'sum(node_namespace_pod_container:container_memory_working_set_bytes{{pod=~"{pod_names}"}}) by (pod)'
+            #pod_node_memory_usage = f'sum(node_namespace_pod_container:container_memory_working_set_bytes{{pod=~"{pod_names}"}}) by (pod)'
+
+            #pod_node_memory_usage = f'sum by (pod, node) (container_memory_working_set_bytes[{timespan}]) / on (node) group_left sum by (node) (container_memory_working_set_bytes[{timespan}]) * 100'
+            pod_node_memory_usage = f'sum by (pod, node) (avg_over_time(container_memory_working_set_bytes[{timespan}])) / on (node) group_left sum by (node) (avg_over_time(container_memory_working_set_bytes[{timespan}])) * 100'
+
 
             # Run the query and get the results
             pod_node_memory_usage_metrics = self.query_prometheus(self.prometheus_endpoint, pod_node_memory_usage, interval, timespan)
@@ -176,14 +207,17 @@ class AKSPod(AzureImpactNode):
                 # Iterate over each pod in the data
                 for pod in data:
                     # Get the pod name and memory usage
-                    pod_name = pod['metric']['pod']
+                    if 'pod' not in pod['metric']:
+                        pod_name = "non_pod_memory_usage"
+                    else:
+                        pod_name = pod['metric']['pod']
                     memory_usage = pod['value'][1]
 
                     # Print the pod name and memory usage
                     print(f'Pod: {pod_name}, Memory Usage: {memory_usage}')
                     if float(memory_usage) < 0:
                         memory_usage = 0
-                    memory_utilization[pod_name] = float(memory_usage) / 1024 / 1024 / 1024 # convert to GB
+                    memory_utilization[pod_name] = float(memory_usage) 
             else:
                 # The query was not successful
                 print('The query failed')
@@ -207,7 +241,7 @@ class AKSPod(AzureImpactNode):
 
 
 
-        def calculate(self, carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
+        async def calculate(self, carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
             pod_list = self.resources
             pod_observations = self.observations
 
@@ -238,7 +272,7 @@ class AKSPod(AzureImpactNode):
                                                                     carbon_intensity_provider=None,
                                                                     metadata=self.metadata,
                                                                     observations=pod_observations[pod_name])
-                res = pod_impact_object.calculate() # get the impact metrics of the pod
+                res = await pod_impact_object.calculate() # get the impact metrics of the pod
                 pods_impact[pod_name] = res[pod_name]  or {} # get the impact metrics of the pod
 
             return pods_impact
