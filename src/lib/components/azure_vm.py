@@ -207,7 +207,7 @@ class AzureVM(AzureImpactNode):
         #always get updated observations
         await self.fetch_observations()
 
-        return self.inner_model.calculate(observations=self.observations, carbon_intensity=100, timespan=self.timespan, interval= self.interval, metadata=self.metadata, static_params=self.static_params)
+        return await self.inner_model.calculate(observations=self.observations, carbon_intensity=self.carbon_intensity_provider, timespan=self.timespan, interval= self.interval, metadata=self.metadata, static_params=self.static_params)
 
 
     async def get_vm_sku_tdp(self, vm_sku: str) -> int:

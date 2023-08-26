@@ -1,10 +1,12 @@
 from lib.ief.core import ImpactModelPluginInterface, SCIImpactMetricsInterface
+from lib.ief.core import CarbonIntensityPluginInterface
 from typing import Dict, List
 
 from datetime import timedelta
 import re
 from isoduration import parse_duration
 import warnings
+
 
 class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
     def __init__(self):
@@ -146,10 +148,15 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return m
 
-    def calculate(self, observations, carbon_intensity: float = 100, timespan : str = "PT1H", interval = 'PT5M', metadata : dict [str, str] = {}, static_params : dict[str, str]= {} ) -> dict[str, SCIImpactMetricsInterface]:
+    async def calculate(self, observations, carbon_intensity: CarbonIntensityPluginInterface= None, timespan : str = "PT1H", interval = 'PT5M', metadata : dict [str, str] = {}, static_params : dict[str, str]= {} ) -> dict[str, SCIImpactMetricsInterface]:
         # Create an empty dictionary to store the metrics for each resource
         resource_metrics = {}
 
+        if carbon_intensity is None:
+            warnings.warn("Carbon intensity provider is not set. Using static value of 100 gCO2e/kWh")
+            CI = 100
+        else:
+            CI = await carbon_intensity.get_current_carbon_intensity()
 
         # Iterate over the observations for each resource
         for resource_name, resource_observations in observations.items():
@@ -168,7 +175,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             egpu = self.calculate_egpu(gpu_util, timespan=timespan, tdp=tdp, gpu_count=rr)
 
             # Calculate the M and SCI metrics
-            i = carbon_intensity
+            i = float(CI["value"])
 
 
             total_vcpus = static_params.get(resource_name, {}).get("total_vcpus", 16) or 16

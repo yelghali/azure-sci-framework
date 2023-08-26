@@ -159,7 +159,7 @@ class AKSNode(AzureVM):
         #always get updated observations
         await self.fetch_observations()
 
-        return self.inner_model.calculate(self.observations, carbon_intensity=carbon_intensity, interval=self.interval, timespan=self.timespan, metadata=self.metadata, static_params=self.static_params)
+        return await self.inner_model.calculate(self.observations, carbon_intensity=self.carbon_intensity_provider, interval=self.interval, timespan=self.timespan, metadata=self.metadata, static_params=self.static_params)
 
 
     async def lookup_static_params(self) -> Dict[str, object]:

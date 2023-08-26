@@ -58,6 +58,22 @@ class SCIImpactMetricsInterface(BaseModel):
 
 
 
+
+class CarbonIntensityPluginInterface(ABC):
+    @abstractmethod
+    def auth(self, auth_params: Dict[str, object]) -> None:
+        pass
+
+    @abstractmethod
+    def configure(self, params: Dict[str, object]) -> None:
+        pass
+
+    @abstractmethod
+    def get_current_carbon_intensity(self) -> float:
+        pass
+
+
+
 class ImpactModelPluginInterface(ABC):
     def __init__(self):
         pass
@@ -75,25 +91,9 @@ class ImpactModelPluginInterface(ABC):
         pass
 
     @abstractmethod
-    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : float = 100, interval : str = "PT5M", timespan : str = "PT1H", metadata : dict [str, str] = {}, static_params : dict[str,str] = None  ) -> Dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, observations: Dict[str, object] = None, carbon_intensity : CarbonIntensityPluginInterface  = None, interval : str = "PT5M", timespan : str = "PT1H", metadata : dict [str, str] = {}, static_params : dict[str,str] = None  ) -> Dict[str, SCIImpactMetricsInterface]:
         pass
 
-
-
-
-
-class CarbonIntensityPluginInterface(ABC):
-    @abstractmethod
-    def auth(self, auth_params: Dict[str, object]) -> None:
-        pass
-
-    @abstractmethod
-    def configure(self, params: Dict[str, object]) -> None:
-        pass
-
-    @abstractmethod
-    def get_current_carbon_intensity(self) -> float:
-        pass
 
 
 
@@ -140,10 +140,11 @@ class ImpactNodeInterface(ABC):
         #lookup the static params for the model, corresponding to the fetched resources
         pass
 
-    async def calculate(self, carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        self.fetch_resources()
-        self.fetch_observations()
-        return self.inner_model.calculate(observations=self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, interval= self.interval, metadata=self.metadata)
+    async def calculate(self, carbon_intensity : CarbonIntensityPluginInterface  = None) -> Dict[str, SCIImpactMetricsInterface]:
+        await self.fetch_resources()
+        await self.lookup_static_params()
+        await self.fetch_observations()
+        return await self.inner_model.calculate(observations=self.observations, carbon_intensity=carbon_intensity, timespan=self.timespan, interval= self.interval, metadata=self.metadata)
 
     def model_identifier(self) -> str:
         return self.inner_model.model_identifier()
@@ -183,7 +184,7 @@ class AggregatedImpactNodesInterface(ABC):
         #lookup the static params for the model, corresponding to the fetched resources
         pass
 
-    def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
+    def calculate(self, carbon_intensity: CarbonIntensityPluginInterface  = None) -> Dict[str, SCIImpactMetricsInterface]:
         # Calculate the metrics for each child component and sum their metrics
         resource_metrics = {}
         metrics_list = []
@@ -196,7 +197,8 @@ class AggregatedImpactNodesInterface(ABC):
             component.timespan = self.timespan
             component.fetch_observations()
 
-            impact_metrics = component.calculate(carbon_intensity=carbon_intensity)
+            carbon_intensity_provider = self.carbon_intensity_provider
+            impact_metrics = component.calculate(carbon_intensity=carbon_intensity_provider)
 
             node_metrics.append(impact_metrics)
             for node_name, node_impact_metric in impact_metrics.items():
@@ -262,7 +264,7 @@ class AttributedImpactNodeInterface(ABC):
         self.timespan = timespan
 
 
-    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
+    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         #return a SCIImpactMetricsInterface object
         
         E_CPU = host_impact.E_CPU * observations.get("node_host_cpu_util_percent", 0) / 100
@@ -308,7 +310,7 @@ class AttributedImpactNodeInterface(ABC):
         )
         return toto
 
-    async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
+    async def calculate(self, carbon_intensity: CarbonIntensityPluginInterface  = None) -> Dict[str, SCIImpactMetricsInterface]:
         if self.host_node_impact_dict is None:
             raise ValueError('Host node is not set')
         
@@ -325,5 +327,6 @@ class AttributedImpactNodeInterface(ABC):
 
         host_impact = list(self.host_node_impact_dict.values())[0]
 
+        carbon_intensity = self.carbon_intensity_provider.get_current_carbon_intensity()
         node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity)
         return node_metric
