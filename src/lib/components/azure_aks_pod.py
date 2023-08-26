@@ -13,6 +13,7 @@ import yaml
 import re
 import io
 
+import asyncio
 
 from azure.mgmt.monitor import MonitorManagementClient
 from azure.mgmt.monitor.models import MetricAggregationType
@@ -50,8 +51,13 @@ class AKSPod(AzureImpactNode):
             return token.token
 
 
-        def query_prometheus(self, prometheus_endpoint: str, query: str,  interval: str, timespan: str) -> Dict[str, Any]:
+        async def query_prometheus(self, prometheus_endpoint: str, query: str,  interval: str, timespan: str) -> Dict[str, Any]:
             url = f"{prometheus_endpoint}/api/v1/query"
+          
+            #timespan = timespan.lower().replace("pt", "")
+            #interval = self.interval.lower().replace("pt", "")
+ 
+          
             params = {
                 "query": query,
                 "start": f"now()-{timespan}",
@@ -126,7 +132,72 @@ class AKSPod(AzureImpactNode):
             return self.resources
         
 
-        async def fetch_observations(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
+        async def fetch_cpu_usage(self) -> Dict[str, float]:
+            pod_names = '|'.join(pod['name'] for pod in self.resources)
+
+            timespan = self.timespan.lower().replace("pt", "")
+            interval = self.interval.lower().replace("pt", "")
+ 
+            pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total[{timespan}])) * 100'
+            print(pod_node_cpu_usage)
+            pod_node_cpu_usage_metrics = await self.query_prometheus(self.prometheus_endpoint, pod_node_cpu_usage, interval, timespan)
+            cpu_utilization = {}
+            if pod_node_cpu_usage_metrics['status'] == 'success':
+                data = pod_node_cpu_usage_metrics['data']['result']
+                for pod in data:
+                    if 'pod' not in pod['metric']:
+                        pod_name = "non_pod_cpu_usage"
+                    else:
+                        pod_name = pod['metric']['pod']
+                    cpu_usage = pod['value'][1]
+                    cpu_utilization[pod_name] = float(cpu_usage)
+            return cpu_utilization
+
+        async def fetch_memory_usage(self) -> Dict[str, float]:
+            pod_names = '|'.join(pod['name'] for pod in self.resources)
+           
+            timespan = self.timespan.lower().replace("pt", "")
+            interval = self.interval.lower().replace("pt", "")
+ 
+            pod_node_memory_usage = f'sum by (pod, node) (avg_over_time(container_memory_working_set_bytes[{timespan}])) / on (node) group_left sum by (node) (avg_over_time(container_memory_working_set_bytes[{timespan}])) * 100'
+            print(pod_node_memory_usage)
+            pod_node_memory_usage_metrics = await self.query_prometheus(self.prometheus_endpoint,pod_node_memory_usage, interval, timespan)
+            memory_utilization = {}
+            if pod_node_memory_usage_metrics['status'] == 'success':
+                data = pod_node_memory_usage_metrics['data']['result']
+                for pod in data:
+                    if 'pod' not in pod['metric']:
+                        pod_name = "non_pod_memory_usage"
+                    else:
+                        pod_name = pod['metric']['pod']
+                    memory_usage = pod['value'][1]
+                    if float(memory_usage) < 0:
+                        memory_usage = 0
+                    memory_utilization[pod_name] = float(memory_usage)
+            return memory_utilization
+
+        async def fetch_observations(self) -> Dict[str, Any]:
+            cpu_utilization = await self.fetch_cpu_usage()
+            memory_utilization = await self.fetch_memory_usage()
+            observations = {}
+            for pod in self.resources:
+                if pod['name'] in cpu_utilization.keys():
+                    cpu = cpu_utilization[pod['name']]
+                else:
+                    cpu = 0
+                if pod['name'] in memory_utilization.keys():
+                    memory = memory_utilization[pod['name']]
+                else:
+                    memory = 0
+                observations[pod['name']] = {
+                    'node_host_cpu_util_percent': float(cpu),
+                    'node_host_memory_util_percent': float(memory),
+                    'node_host_gpu_util_percent': 0  # gpu_utilization TODO
+                }
+            self.observations = observations
+            return self.observations
+
+        async def fetch_observations2(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
             self.subscription_id = self.resource_selectors.get("subscription_id", None)
             self.resource_group_name = self.resource_selectors.get("resource_group", None)
             monitor_client = MonitorManagementClient(self.credential, self.subscription_id)
@@ -238,7 +309,55 @@ class AKSPod(AzureImpactNode):
 
 
 
+
         async def calculate(self, carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
+            pod_list = self.resources
+            pod_observations = self.observations
+
+            node_names = [pod['node_name'] for pod in pod_list]
+
+            node_tasks = []
+            node_impact_metrics = {}
+            for node_name in node_names:
+                # create an AKSNode object for each node
+                resource_selectors = {
+                    "subscription_id": self.resource_selectors.get("subscription_id", None),
+                    "resource_group": self.resource_selectors.get("resource_group", None),
+                    "cluster_name": self.resource_selectors.get("cluster_name", None),
+                    "node_name" : node_name,
+                    "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
+                }
+                node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=None, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
+                node_task = asyncio.create_task(node.calculate())
+                node_tasks.append(node_task)
+
+            node_results = await asyncio.gather(*node_tasks)
+            for i, node_name in enumerate(node_names):
+                node_impact_metrics[node_name] = node_results[i]
+
+            pod_tasks = []
+            pods_impact = {}
+            for pod in pod_list:
+                node_name = pod['node_name']
+                pod_name = pod['name']
+                pod_impact_object = AttributedImpactNodeInterface(name = pod_name,
+                                                                    host_node_impact_dict= node_impact_metrics[node_name],
+                                                                    carbon_intensity_provider=None,
+                                                                    metadata=self.metadata,
+                                                                    observations=pod_observations[pod_name],
+                                                                    timespan=self.timespan,
+                                                                    interval=self.interval)
+                pod_task = asyncio.create_task(pod_impact_object.calculate())
+                pod_tasks.append(pod_task)
+
+            pod_results = await asyncio.gather(*pod_tasks)
+            for i, pod in enumerate(pod_list):
+                pod_name = pod['name']
+                pods_impact[pod_name] = pod_results[i][pod_name] or {}
+
+            return pods_impact
+
+        async def calculate2(self, carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
             pod_list = self.resources
             pod_observations = self.observations
 
