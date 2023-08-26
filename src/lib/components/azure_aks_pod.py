@@ -1,5 +1,5 @@
 import requests
-from typing import Dict, Any
+from typing import Coroutine, Dict, Any
 from lib.components.azure_base import AzureImpactNode
 from lib.components.azure_aks_node import AKSNode
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
@@ -45,6 +45,9 @@ class AKSPod(AzureImpactNode):
         def list_supported_skus(self):
             pass
         
+        async def lookup_static_params(self) -> Dict[str, Any]:
+            return {}
+
         def get_auth_token(self):
             scope = "https://prometheus.monitor.azure.com/.default"
             token = self.credential.get_token(scope)
@@ -311,8 +314,11 @@ class AKSPod(AzureImpactNode):
 
 
         async def calculate(self, carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
+            if self.resources == {} or self.resources == None:
+                await self.fetch_resources()
             pod_list = self.resources
-            pod_observations = self.observations
+
+            pod_observations = await self.fetch_observations()
 
             node_names = [pod['node_name'] for pod in pod_list]
 
@@ -337,6 +343,8 @@ class AKSPod(AzureImpactNode):
 
             pod_tasks = []
             pods_impact = {}
+            print(pod_observations)
+
             for pod in pod_list:
                 node_name = pod['node_name']
                 pod_name = pod['name']

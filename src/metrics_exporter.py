@@ -91,36 +91,36 @@ pod_resource_selectors = {
  }
 
 
-async def main1():
-    # toto = await vm.fetch_resources()
-    # print(toto)
-    # tata = await vm.lookup_static_params()
-    # print(tata)
+# async def main1():
+#     # toto = await vm.fetch_resources()
+#     # print(toto)
+#     # tata = await vm.lookup_static_params()
+#     # print(tata)
 
 
-    # #tutu = await vm.fetch_observations()
-    # #print(tutu)
-    # uuu = await vm.calculate()
-    # print(uuu)
+#     # #tutu = await vm.fetch_observations()
+#     # #print(tutu)
+#     # uuu = await vm.calculate()
+#     # print(uuu)
 
-    # await node.fetch_resources()
-    # toto = await node.lookup_static_params()
-    # print(toto)
-    # tutu = await node.fetch_observations()
-    # print(tutu)
-    # uuu = await node.calculate()
-    # print(uuu)
+#     # await node.fetch_resources()
+#     # toto = await node.lookup_static_params()
+#     # print(toto)
+#     # tutu = await node.fetch_observations()
+#     # print(tutu)
+#     # uuu = await node.calculate()
+#     # print(uuu)
 
 
-    pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
+#     pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
 
-    await pod.fetch_resources()
-    await pod.fetch_observations()
-    ttoto = await pod.calculate()
-    print(ttoto)
+#     await pod.fetch_resources()
+#     await pod.fetch_observations()
+#     ttoto = await pod.calculate()
+#     print(ttoto)
 
-if __name__ == '__main__':
-    asyncio.run(main1())
+# if __name__ == '__main__':
+#     asyncio.run(main1())
 
 async def process_impact_node(impact_node: ImpactNodeInterface, stop_event: asyncio.Event):
     # fetch the resources and static params once
@@ -156,33 +156,42 @@ async def main(impact_nodes: List[ImpactNodeInterface]):
 
 
 # Program entry point
-# if __name__ == '__main__':
+if __name__ == '__main__':
 
-#     #static method
-#     MetricsExporter.start_http_server(port=8000)
+    #static method
+    MetricsExporter.start_http_server(port=8000)
 
-#     # 1. Create the impact nodes for which you want to calculate the impact
-#     impact_nodes = [
-#         AzureVM(name = "myazurevm", model = ComputeServer_STATIC_IMP(),  
-#              carbon_intensity_provider=None, 
-#              auth_object=auth_params, 
-#              resource_selectors=vm_resource_selectors, 
-#              metadata=metadata,
-#              timespan=timespan,
-#              interval=interval)
-#              , 
-#         AKSNode(name = "myaksclsuter", 
-#                 model = ComputeServer_STATIC_IMP(),  
-#                 carbon_intensity_provider=None, 
-#                 auth_object=auth_params, 
-#                 resource_selectors=node_resource_selectors, 
-#                 metadata=metadata, 
-#                 timespan=timespan, 
-#                 interval=interval)
-#         ]
+    # 1. Create the impact nodes for which you want to calculate the impact
+    impact_nodes = [
+        AzureVM(name = "myazurevm", model = ComputeServer_STATIC_IMP(),  
+             carbon_intensity_provider=None, 
+             auth_object=auth_params, 
+             resource_selectors=vm_resource_selectors, 
+             metadata=metadata,
+             timespan=timespan,
+             interval=interval)
+             , 
+        AKSNode(name = "myaksclsuter", 
+                model = ComputeServer_STATIC_IMP(),  
+                carbon_intensity_provider=None, 
+                auth_object=auth_params, 
+                resource_selectors=node_resource_selectors, 
+                metadata=metadata, 
+                timespan=timespan, 
+                interval=interval)
+            ,
+        AKSPod(name = "myakspod",
+                model = ComputeServer_STATIC_IMP(),
+                carbon_intensity_provider=None,
+                auth_object=auth_params,
+                resource_selectors=pod_resource_selectors,
+                metadata=metadata,
+                timespan=timespan,
+                interval=interval)
+        ]
     
-#     # 2. Run the main function
-#     asyncio.run(main(impact_nodes))
+    # 2. Run the main function
+    asyncio.run(main(impact_nodes))
 
 
 
