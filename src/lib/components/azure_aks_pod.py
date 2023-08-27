@@ -32,6 +32,7 @@ class AKSPod(AzureImpactNode):
             self.observations = {}
             self.credential = DefaultAzureCredential()
             self.resource_selectors = resource_selectors
+            self.carbon_intensity_provider = carbon_intensity_provider
             self.metadata = metadata
             self.auth_object = auth_object
             self.inner_model = model if model is not None else ComputeServer_STATIC_IMP() #use to calculate the impact of the node
@@ -333,7 +334,7 @@ class AKSPod(AzureImpactNode):
                     "node_name" : node_name,
                     "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
                 }
-                node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=None, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
+                node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=self.carbon_intensity_provider, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
                 node_task = asyncio.create_task(node.calculate())
                 node_tasks.append(node_task)
 

@@ -82,45 +82,44 @@ pod_resource_selectors = {
      "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
  }
 
-
-async def main1():
-
-    node_resource_selectors = {
-        "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
-        "resource_group": "sus-aks-lab",
-        "cluster_name": "sus-aks-lab",
-        #"node_name" : "aks-agentpool-23035252-vmss000005",
-        "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
-    }
+node_resource_selectors = {
+    "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
+    "resource_group": "sus-aks-lab",
+    "cluster_name": "sus-aks-lab",
+    #"node_name" : "aks-agentpool-23035252-vmss000005",
+    "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
+}
 
 
+# async def main1():
 
-    carbonIntensityProvider = CarbonIntensityKubernetesConfigMap(node_resource_selectors)
-    await carbonIntensityProvider.auth(auth_params)
-    await carbonIntensityProvider.configure({"namespace": "kube-system", "config_map_name": "carbon-intensity"})
+
+#     carbonIntensityProvider = CarbonIntensityKubernetesConfigMap(node_resource_selectors)
+#     await carbonIntensityProvider.auth(auth_params)
+#     await carbonIntensityProvider.configure({"namespace": "kube-system", "config_map_name": "carbon-intensity"})
  
-    node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=carbonIntensityProvider, auth_object=auth_params, resource_selectors=node_resource_selectors, metadata=metadata, timespan=timespan, interval=interval)
+#     node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=carbonIntensityProvider, auth_object=auth_params, resource_selectors=node_resource_selectors, metadata=metadata, timespan=timespan, interval=interval)
 
 
 
-#     # toto = await vm.fetch_resources()
+# #     # toto = await vm.fetch_resources()
+# #     # print(toto)
+# #     # tata = await vm.lookup_static_params()
+# #     # print(tata)
+
+
+# #     # #tutu = await vm.fetch_observations()
+# #     # #print(tutu)
+# #     # uuu = await vm.calculate()
+# #     # print(uuu)
+
+#     # await node.fetch_resources()
+#     # toto = await node.lookup_static_params()
 #     # print(toto)
-#     # tata = await vm.lookup_static_params()
-#     # print(tata)
-
-
-#     # #tutu = await vm.fetch_observations()
-#     # #print(tutu)
-#     # uuu = await vm.calculate()
-#     # print(uuu)
-
-    # await node.fetch_resources()
-    # toto = await node.lookup_static_params()
-    # print(toto)
-    # tutu = await node.fetch_observations()
-    # print(tutu)
-    uuu = await node.calculate()
-    print(uuu)
+#     # tutu = await node.fetch_observations()
+#     # print(tutu)
+#     uuu = await node.calculate()
+#     print(uuu)
 
 
 #     pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
@@ -130,8 +129,8 @@ async def main1():
 #     ttoto = await pod.calculate()
 #     print(ttoto)
 
-if __name__ == '__main__':
-    asyncio.run(main1())
+# if __name__ == '__main__':
+#     asyncio.run(main1())
 
 async def process_impact_node(impact_node: ImpactNodeInterface, stop_event: asyncio.Event):
     # fetch the resources and static params once
@@ -166,43 +165,48 @@ async def main(impact_nodes: List[ImpactNodeInterface]):
     await asyncio.gather(*tasks)
 
 
-# # Program entry point
-# if __name__ == '__main__':
+# Program entry point
+if __name__ == '__main__':
 
-#     #static method
-#     MetricsExporter.start_http_server(port=8000)
+    carbonIntensityProvider = CarbonIntensityKubernetesConfigMap(node_resource_selectors)
+    carbonIntensityProvider.auth(auth_params)
+    carbonIntensityProvider.configure({"namespace": "kube-system", "config_map_name": "carbon-intensity"})
+ 
 
-#     # 1. Create the impact nodes for which you want to calculate the impact
-#     impact_nodes = [
-#         AzureVM(name = "myazurevm", model = ComputeServer_STATIC_IMP(),  
-#              carbon_intensity_provider=None, 
-#              auth_object=auth_params, 
-#              resource_selectors=vm_resource_selectors, 
-#              metadata=metadata,
-#              timespan=timespan,
-#              interval=interval)
-#              , 
-#         AKSNode(name = "myaksclsuter", 
-#                 model = ComputeServer_STATIC_IMP(),  
-#                 carbon_intensity_provider=None, 
-#                 auth_object=auth_params, 
-#                 resource_selectors=node_resource_selectors, 
-#                 metadata=metadata, 
-#                 timespan=timespan, 
-#                 interval=interval)
-#             ,
-#         AKSPod(name = "myakspod",
-#                 model = ComputeServer_STATIC_IMP(),
-#                 carbon_intensity_provider=None,
-#                 auth_object=auth_params,
-#                 resource_selectors=pod_resource_selectors,
-#                 metadata=metadata,
-#                 timespan=timespan,
-#                 interval=interval)
-#         ]
+    #static method
+    MetricsExporter.start_http_server(port=8000)
+
+    # 1. Create the impact nodes for which you want to calculate the impact
+    impact_nodes = [
+        AzureVM(name = "myazurevm", model = ComputeServer_STATIC_IMP(),  
+             carbon_intensity_provider=carbonIntensityProvider, 
+             auth_object=auth_params, 
+             resource_selectors=vm_resource_selectors, 
+             metadata=metadata,
+             timespan=timespan,
+             interval=interval)
+             , 
+        AKSNode(name = "myaksclsuter", 
+                model = ComputeServer_STATIC_IMP(),  
+                carbon_intensity_provider=carbonIntensityProvider, 
+                auth_object=auth_params, 
+                resource_selectors=node_resource_selectors, 
+                metadata=metadata, 
+                timespan=timespan, 
+                interval=interval)
+            ,
+        AKSPod(name = "myakspod",
+                model = ComputeServer_STATIC_IMP(),
+                carbon_intensity_provider=carbonIntensityProvider,
+                auth_object=auth_params,
+                resource_selectors=pod_resource_selectors,
+                metadata=metadata,
+                timespan=timespan,
+                interval=interval)
+        ]
     
-#     # 2. Run the main function
-#     asyncio.run(main(impact_nodes))
+    # 2. Run the main function
+    asyncio.run(main(impact_nodes))
 
 
 

@@ -27,7 +27,7 @@ class CarbonIntensityKubernetesConfigMap(CarbonIntensityPluginInterface):
         self.resource_selectors = resource_selectors
 
 
-    async def auth(self, auth_params: Dict[str, object]) -> None:
+    def auth(self, auth_params: Dict[str, object]) -> None:
         subscription_id = self.resource_selectors.get("subscription_id", None)
         resource_group_name = self.resource_selectors.get("resource_group", None)
         cluster_name = self.resource_selectors.get("cluster_name", None)
@@ -44,7 +44,7 @@ class CarbonIntensityKubernetesConfigMap(CarbonIntensityPluginInterface):
         loader.load_and_set(configuration)
         client.Configuration.set_default(configuration)
 
-    async def configure(self, params: Dict[str, object]) -> None:
+    def configure(self, params: Dict[str, object]) -> None:
         # Get the namespace and ConfigMap name from the configuration parameters
         self.namespace = params.get('namespace', 'kube-system')
         self.config_map_name = params.get('config_map_name', 'carbon-intensity')

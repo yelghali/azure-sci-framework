@@ -327,6 +327,8 @@ class AttributedImpactNodeInterface(ABC):
 
         host_impact = list(self.host_node_impact_dict.values())[0]
 
-        carbon_intensity = self.carbon_intensity_provider.get_current_carbon_intensity()
+        CI = await self.carbon_intensity_provider.get_current_carbon_intensity()
+        carbon_intensity = CI["value"]
+        
         node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity)
         return node_metric

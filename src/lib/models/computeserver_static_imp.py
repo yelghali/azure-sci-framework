@@ -157,6 +157,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             CI = 100
         else:
             CI = await carbon_intensity.get_current_carbon_intensity()
+            CI = CI["value"]
 
         # Iterate over the observations for each resource
         for resource_name, resource_observations in observations.items():
@@ -175,7 +176,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             egpu = self.calculate_egpu(gpu_util, timespan=timespan, tdp=tdp, gpu_count=rr)
 
             # Calculate the M and SCI metrics
-            i = float(CI["value"])
+            i = float(CI)
 
 
             total_vcpus = static_params.get(resource_name, {}).get("total_vcpus", 16) or 16
