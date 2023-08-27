@@ -298,6 +298,7 @@ class AKSPod(AzureImpactNode):
 
             node_names = set([pod['node_name'] for pod in pod_list])
 
+            # first we gather the info of the nodes: models, static params, impacts
             node_tasks = []
             node_static_params_tasks = []
             node_impact_metrics = {}
@@ -329,9 +330,9 @@ class AKSPod(AzureImpactNode):
                 node_static_params[node_name] = node_static_params_results[i]
                 node_impact_metrics[node_name] = node_results[i]
 
-            # for i, node_name in enumerate(node_names):
-            #     node_impact_metrics[node_name] = node_results[i]
 
+            # now we create an AttributedImpactNodeInterface object for each pod
+            # the AttributedImpactNodeInterface class is used to calculate the impact of a pod that shares node resources with other pods
             pod_tasks = []
             pods_impact = {}
             print(pod_observations)
@@ -351,10 +352,7 @@ class AKSPod(AzureImpactNode):
                                                                     host_node_model = node_models[node_name])
                 pod_task = asyncio.create_task(pod_impact_object.calculate())
                 pod_tasks.append(pod_task)
-                print("\nrrr")
-                print(node_static_params[node_name])
-                print(pod_static_params[pod_name])
-                print("\nrrr")
+
             pod_results = await asyncio.gather(*pod_tasks)
 
             for i, pod in enumerate(pod_list):
