@@ -123,6 +123,20 @@ class AKSPod(AzureImpactNode):
                 pod['namespace'] = item.metadata.namespace
                 pod['labels'] = item.metadata.labels
                 pod['node_name'] = item.spec.node_name
+
+                # Get the CPU and memory requests and limits
+                resources = item.spec.containers[0].resources
+                if resources is not None:
+                    requests = resources.requests
+                    limits = resources.limits
+                    if requests is not None:
+                        pod['cpu_request'] = requests.get('cpu')
+                        pod['memory_request'] = requests.get('memory')
+                    if limits is not None:
+                        pod['cpu_limit'] = limits.get('cpu')
+                        pod['memory_limit'] = limits.get('memory')
+
+                #Get host node info
                 node_name = pod['node_name']
                 if node_name not in nodes_uris:
                     node_uri = v1.read_node(node_name).spec.provider_id.replace("azure://", "")
@@ -135,6 +149,64 @@ class AKSPod(AzureImpactNode):
             self.resources = pod_list
             return self.resources
         
+        def cpu_to_gb(self, cpu: str) -> float:
+            """
+            Convert CPU requests and limits to GB.
+            :param cpu: str, CPU requests or limits, e.g. '100m', '1'.
+            :return: float, CPU requests or limits in GB.
+            """
+            if cpu.endswith('m'):
+                return float(cpu[:-1]) / 1000
+            else:
+                return float(cpu)
+
+        def memory_to_gb(self, memory: str) -> float:
+            """
+            Convert memory requests and limits to GB.
+            :param memory: str, memory requests or limits, e.g. '64Mi', '1Gi'.
+            :return: float, memory requests or limits in GB.
+            """
+            if memory.endswith('Ki'):
+                return float(memory[:-2]) / (1024 ** 2)
+            elif memory.endswith('Mi'):
+                return float(memory[:-2]) / 1024
+            elif memory.endswith('Gi'):
+                return float(memory[:-2])
+            elif memory.endswith('Ti'):
+                return float(memory[:-2]) * 1024
+            elif memory.endswith('Pi'):
+                return float(memory[:-2]) * (1024 ** 2)
+            elif memory.endswith('Ei'):
+                return float(memory[:-2]) * (1024 ** 3)
+            else:
+                return float(memory) / (1024 ** 3)
+
+
+        async def lookup_static_params(self) -> Dict[str, Any]:
+            pod_static_params = {}
+            
+            if not self.resources or self.resources == {}:
+                await self.fetch_resources()
+            pods_list = self.resources
+
+            # get CPU & RAM, requests & limits for each pod, in GB
+            for pod in pods_list:
+                print(pod)
+                pod_name = pod['name']
+                pod_static_params[pod_name] = {}
+                pod_static_params[pod_name]['cpu_request'] = pod.get('cpu_request', 0)
+                pod_static_params[pod_name]['cpu_limit'] = pod.get('cpu_limit', 0)
+                pod_static_params[pod_name]['memory_request'] = pod.get('memory_request', 0)
+                pod_static_params[pod_name]['memory_limit'] = pod.get('memory_limit', 0)
+                pod_static_params[pod_name]['uri'] = pod.get('uri', 0)
+
+                #convert to GB
+                pod_static_params[pod_name]['cpu_request'] = self.cpu_to_gb(pod_static_params[pod_name]['cpu_request'])
+                pod_static_params[pod_name]['cpu_limit'] = self.cpu_to_gb(pod_static_params[pod_name]['cpu_limit'])
+                pod_static_params[pod_name]['memory_request'] = self.memory_to_gb(pod_static_params[pod_name]['memory_request'])
+                pod_static_params[pod_name]['memory_limit'] = self.memory_to_gb(pod_static_params[pod_name]['memory_limit'])
+            
+            return pod_static_params
 
         async def fetch_cpu_usage(self) -> Dict[str, float]:
             pod_names = '|'.join(pod['name'] for pod in self.resources)
@@ -201,116 +273,6 @@ class AKSPod(AzureImpactNode):
             self.observations = observations
             return self.observations
 
-        # async def fetch_observations2(self, aggregation: str = MetricAggregationType.AVERAGE, timespan: str = "PT1H", interval: str = "PT15M") -> Dict[str, Any]:
-        #     self.subscription_id = self.resource_selectors.get("subscription_id", None)
-        #     self.resource_group_name = self.resource_selectors.get("resource_group", None)
-        #     monitor_client = MonitorManagementClient(self.credential, self.subscription_id)
-        #     nodes = {}
-        #     pod_list = self.resources
-
-
-        #     timespan = self.timespan.lower().replace("pt", "")
-        #     interval = self.interval.lower().replace("pt", "")
- 
-        #     observations = {}   
-
-        #     cpu_utilization = {}
-        #     memory_utilization = {}
-        #     gpu_utilization = {}
-
-
-        #     # Define the Prometheus queries to get CPU utilization percentage, total RAM, and GPU utilization percentage by node
-        #     #pod_node_cpu_usage = f'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{{node=~"{node_name}"}}) by (pod)'
-
-
-        #     pod_names = '|'.join( pod['name'] for pod in pod_list)
-
-        #     # Define the Prometheus query to get the CPU usage of pods by node
-        #     #pod_node_cpu_usage = f'sum(node_namespace_pod_container:container_cpu_usage_seconds_total:sum_irate{{pod=~"{pod_names}"}}) by (pod)'
-            
-        #     #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}["{timespan}"])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}["{timespan}"])) * 100'
-        #     #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{job="node-exporter"}}[{timespan}])) * 100'
-
-        #     #pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total{{pod=~"{pod_names}"}}[{timespan}])) * 100'            #node_metrics = self.prom_client.query_range(query=node_query, start=self.start_time, end=self.end_time, step=self.step_size)
-        #     pod_node_cpu_usage = f'sum by (pod, node) (rate(container_cpu_usage_seconds_total[{timespan}])) / on (node) group_left sum by (node) (rate(container_cpu_usage_seconds_total[{timespan}])) * 100'           
-        #     #sum by (pod, node) (rate(container_cpu_usage_seconds_total{pod=~"{pod_names}"}[1m])) / on (node) group_left sum by (node) (rate(node_cpu_seconds_total[1m])) * 100
-                        
-        #     pod_node_cpu_usage_metrics = self.query_prometheus(self.prometheus_endpoint, pod_node_cpu_usage, interval, timespan)
-        #                     # Process the results
-
-        #     # Check if the query was successful
-        #     if pod_node_cpu_usage_metrics['status'] == 'success':
-        #         # Get the data from the result
-        #         data = pod_node_cpu_usage_metrics['data']['result']
-
-        #         # Iterate over each pod in the data
-        #         for pod in data:
-        #             # Get the pod name and CPU usage
-        #             if 'pod' not in pod['metric']:
-        #                 pod_name = "non_pod_cpu_usage"
-        #             else:
-        #                 pod_name = pod['metric']['pod']
-        #             cpu_usage = pod['value'][1]
-
-        #             # Print the pod name and CPU usage
-        #             print(f'Pod: {pod_name}, CPU Usage: {cpu_usage}')
-        #             cpu_utilization[pod_name] = float(cpu_usage)
-        #     else:
-        #         # The query was not successful
-        #         print('The query failed')
-
-
-
-        #     # Define the Prometheus query to get the memory usage of pods by node
-        #     #pod_node_memory_usage = f'sum(node_namespace_pod_container:container_memory_working_set_bytes{{pod=~"{pod_names}"}}) by (pod)'
-
-        #     #pod_node_memory_usage = f'sum by (pod, node) (container_memory_working_set_bytes[{timespan}]) / on (node) group_left sum by (node) (container_memory_working_set_bytes[{timespan}]) * 100'
-        #     pod_node_memory_usage = f'sum by (pod, node) (avg_over_time(container_memory_working_set_bytes[{timespan}])) / on (node) group_left sum by (node) (avg_over_time(container_memory_working_set_bytes[{timespan}])) * 100'
-
-
-        #     # Run the query and get the results
-        #     pod_node_memory_usage_metrics = self.query_prometheus(self.prometheus_endpoint, pod_node_memory_usage, interval, timespan)
-
-        #     # Process the results
-        #     if pod_node_memory_usage_metrics['status'] == 'success':
-        #         # Get the data from the result
-        #         data = pod_node_memory_usage_metrics['data']['result']
-
-        #         # Iterate over each pod in the data
-        #         for pod in data:
-        #             # Get the pod name and memory usage
-        #             if 'pod' not in pod['metric']:
-        #                 pod_name = "non_pod_memory_usage"
-        #             else:
-        #                 pod_name = pod['metric']['pod']
-        #             memory_usage = pod['value'][1]
-
-        #             # Print the pod name and memory usage
-        #             print(f'Pod: {pod_name}, Memory Usage: {memory_usage}')
-        #             if float(memory_usage) < 0:
-        #                 memory_usage = 0
-        #             memory_utilization[pod_name] = float(memory_usage) 
-        #     else:
-        #         # The query was not successful
-        #         print('The query failed')
-
-
-        #     # add observations to dict pod_name : {cpu, memory, gpu}
-        #     for pod in pod_list:
-        #         if pod['name'] in cpu_utilization.keys() : cpu = cpu_utilization[pod['name']]  
-        #         else : cpu = 0
-                
-        #         if pod['name'] in memory_utilization.keys(): memory = memory_utilization[pod['name']] 
-        #         else : memory = 0
-        #         observations[pod['name']] = {
-        #             'node_host_cpu_util_percent': float(cpu),
-        #             'node_host_memory_util_percent': float(memory),
-        #             'node_host_gpu_util_percent': 0 #gpu_utilization TODO   
-        #         }
-
-        #     self.observations = observations
-        #     return self.observations   
-
 
 
 
@@ -320,11 +282,15 @@ class AKSPod(AzureImpactNode):
             pod_list = self.resources
 
             pod_observations = await self.fetch_observations()
+            pod_static_params = await self.lookup_static_params()
 
             node_names = set([pod['node_name'] for pod in pod_list])
 
             node_tasks = []
+            node_static_params_tasks = []
             node_impact_metrics = {}
+            node_static_params = {}
+            node_models = {}
             for node_name in node_names:
                 # create an AKSNode object for each node
                 resource_selectors = {
@@ -335,12 +301,24 @@ class AKSPod(AzureImpactNode):
                     "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
                 }
                 node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=self.carbon_intensity_provider, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
+                
+                node_models[node_name] = node.inner_model
+                #local_func = lambda: (node.lookup_static_params(), node.calculate());
                 node_task = asyncio.create_task(node.calculate())
+                node_static_param_task = asyncio.create_task(node.lookup_static_params())
+                #node_task = asyncio.create_task(local_func)
                 node_tasks.append(node_task)
+                node_static_params_tasks.append(node_static_param_task)
 
             node_results = await asyncio.gather(*node_tasks)
+            node_static_params_results = await asyncio.gather(*node_static_params_tasks)
+
             for i, node_name in enumerate(node_names):
+                node_static_params[node_name] = node_static_params_results[i]
                 node_impact_metrics[node_name] = node_results[i]
+
+            # for i, node_name in enumerate(node_names):
+            #     node_impact_metrics[node_name] = node_results[i]
 
             pod_tasks = []
             pods_impact = {}
@@ -355,52 +333,20 @@ class AKSPod(AzureImpactNode):
                                                                     metadata=self.metadata,
                                                                     observations=pod_observations[pod_name],
                                                                     timespan=self.timespan,
-                                                                    interval=self.interval)
+                                                                    interval=self.interval,
+                                                                    static_params = pod_static_params[pod_name],
+                                                                    host_node_static_params=node_static_params[node_name],
+                                                                    host_node_model = node_models[node_name])
                 pod_task = asyncio.create_task(pod_impact_object.calculate())
                 pod_tasks.append(pod_task)
-
+                print("\nrrr")
+                print(node_static_params[node_name])
+                print(pod_static_params[pod_name])
+                print("\nrrr")
             pod_results = await asyncio.gather(*pod_tasks)
+
             for i, pod in enumerate(pod_list):
                 pod_name = pod['name']
                 pods_impact[pod_name] = pod_results[i][pod_name] or {}
 
             return pods_impact
-
-        # async def calculate2(self, carbon_intensity = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        #     pod_list = self.resources
-        #     pod_observations = self.observations
-
-        #     node_names = [pod['node_name'] for pod in pod_list]
-
-        #     node_impact_metrics = {}
-        #     for node_name in node_names:
-        #         # create an AKSNode object for each node
-        #         resource_selectors = {
-        #             "subscription_id": self.resource_selectors.get("subscription_id", None),
-        #             "resource_group": self.resource_selectors.get("resource_group", None),
-        #             "cluster_name": self.resource_selectors.get("cluster_name", None),
-        #             "node_name" : node_name,
-        #             "prometheus_endpoint": self.resource_selectors.get("prometheus_endpoint", None)
-        #         }
-        #         node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=None, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
-        #         node_impact_dict = await node.calculate() # get the impact metrics of the node
-        #         #node.fetch_resources()
-        #         #node.fetch_observations()
-        #         node_impact_metrics[node_name] = node_impact_dict
-            
-
-        #     pods_impact = {}
-        #     for pod in pod_list:
-        #         node_name = pod['node_name']
-        #         pod_name = pod['name']
-        #         pod_impact_object = AttributedImpactNodeInterface(name = pod_name,
-        #                                                             host_node_impact_dict= node_impact_metrics[node_name],
-        #                                                             carbon_intensity_provider=None,
-        #                                                             metadata=self.metadata,
-        #                                                             observations=pod_observations[pod_name],
-        #                                                             timespan=self.timespan,
-        #                                                             interval=self.interval)
-        #         res = await pod_impact_object.calculate() # get the impact metrics of the pod
-        #         pods_impact[pod_name] = res[pod_name]  or {} # get the impact metrics of the pod
-
-        #     return pods_impact

@@ -78,7 +78,7 @@ pod_resource_selectors = {
      "cluster_name": "sus-aks-lab",
      #"labels" : {"name" : "keda-operator"},
      #"namespace" : "carbon-aware-keda-operator-system",
-     #"namespace" : "keda",
+     "namespace" : "keda",
      "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
  }
 
@@ -95,8 +95,8 @@ node_resource_selectors = {
 
 
 #     carbonIntensityProvider = CarbonIntensityKubernetesConfigMap(node_resource_selectors)
-#     await carbonIntensityProvider.auth(auth_params)
-#     await carbonIntensityProvider.configure({"namespace": "kube-system", "config_map_name": "carbon-intensity"})
+#     carbonIntensityProvider.auth(auth_params)
+#     carbonIntensityProvider.configure({"namespace": "kube-system", "config_map_name": "carbon-intensity"})
  
 #     node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=carbonIntensityProvider, auth_object=auth_params, resource_selectors=node_resource_selectors, metadata=metadata, timespan=timespan, interval=interval)
 
@@ -118,16 +118,18 @@ node_resource_selectors = {
 #     # print(toto)
 #     # tutu = await node.fetch_observations()
 #     # print(tutu)
-#     uuu = await node.calculate()
-#     print(uuu)
+#     #uuu = await node.calculate()
+#     #print(uuu)
 
 
-#     pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
+#     pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=carbonIntensityProvider, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
 
-#     await pod.fetch_resources()
-#     await pod.fetch_observations()
+#     #toto = await pod.fetch_resources()
+#     toto = await pod.lookup_static_params()
+#     #print(toto)
+#     #await pod.fetch_observations()
 #     ttoto = await pod.calculate()
-#     print(ttoto)
+#     #print(ttoto)
 
 # if __name__ == '__main__':
 #     asyncio.run(main1())

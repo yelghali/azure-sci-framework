@@ -249,7 +249,7 @@ class AggregatedImpactNodesInterface(ABC):
 
 class AttributedImpactNodeInterface(ABC):
 
-    def __init__(self, name, host_node_impact_dict : dict = {}, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None, interval : str = "PT5M", timespan : str = "PT1H"):
+    def __init__(self, name, host_node_impact_dict : dict = {}, host_node_static_params : dict = {},host_node_model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, observations: Dict = None, interval : str = "PT5M", timespan : str = "PT1H", static_params : dict = {}):
         self.type = "attributedimpactnode"
         self.inner_model = "attributedimpactfromnode" #not using a model for now, using attribute_impact_from_host_node func
         self.carbon_intensity_provider = carbon_intensity_provider
@@ -258,21 +258,46 @@ class AttributedImpactNodeInterface(ABC):
         self.metadata = metadata
         self.resources = None
         self.observations = observations
+        self.static_params = static_params
         self.host_node_impact_dict = host_node_impact_dict
+        self.host_node_static_params = host_node_static_params
         self.name = name if name is not None else "attributedimpactnode"
         self.interval = interval
         self.timespan = timespan
+        self.host_node_model = host_node_model
 
 
-    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity : float = 100) -> Dict[str, SCIImpactMetricsInterface]:
-        #return a SCIImpactMetricsInterface object
+    def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity : float = 100, host_static_params : dict = {}, self_static_parms : dict = {}, host_node_model : ImpactNodeInterface = None) -> Dict[str, SCIImpactMetricsInterface]:
+        #return a SCIImpactMetricsInterface object, 
         
+        # Energy
         E_CPU = host_impact.E_CPU * observations.get("node_host_cpu_util_percent", 0) / 100
         E_MEM = host_impact.E_MEM * observations.get("node_host_memory_util_percent", 0) / 100
         E_GPU = host_impact.E_GPU * observations.get("node_host_gpu_util_percent", 0) / 100
         E = E_CPU + E_MEM + E_GPU
+
+        # Carbon Intensity
         I = carbon_intensity
-        M = host_impact.M #TODO : change this to be calculated from the host node
+        
+        
+        # Embodied Emisions (M)
+        #prep pod_node_static_params, to call host_node_model.calculate_m
+        pod_node_static_params = {}
+        # te is node te
+        # rr / instance cpu is pod cpu limit (gb)
+        # total_vc is node instance cpu (rr of node)
+        te = host_static_params.get("te", 0)
+        print("te : %s" % te)
+        rr = self_static_parms.get("cpu_limit", 0)
+        print("rr : %s" % rr)
+        total_vc = host_static_params.get("total_vcpus", 0)
+        print("total_vc : %s" % total_vc)
+        M = host_node_model.calculate_m(te=te, rr=rr, total_vcpus=total_vc, timespan=self.timespan)
+        print("pod M : %s" % M)
+        MHost = host_impact.M #TODO : change this to be calculated from the host node
+        print("host M : %s" % MHost)
+        
+        # SCI
         SCI = (E * I) + M
 
         # Create a new SCIImpactMetricsInterface instance with the calculated metrics
@@ -326,9 +351,12 @@ class AttributedImpactNodeInterface(ABC):
         #host_impact_dict = await self.host_node.calculate(carbon_intensity=carbon_intensity)
 
         host_impact = list(self.host_node_impact_dict.values())[0]
+        host_static_params = list(self.host_node_static_params.values())[0]
+        self_static_parms = self.static_params
+        host_node_model = self.host_node_model
 
         CI = await self.carbon_intensity_provider.get_current_carbon_intensity()
         carbon_intensity = CI["value"]
-        
-        node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity)
+
+        node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity, host_static_params=host_static_params, self_static_parms=self_static_parms, host_node_model=host_node_model)
         return node_metric

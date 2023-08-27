@@ -107,11 +107,8 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         te_g = te * 1000  # gCO2e
 
         # TR: Time reserved for the hardware
-        tr = 1  # hour
+        tr = 1  # 1 hour, default value
         
-        #duration = parse_duration(timespan)
-        #duration_in_hours = float(duration.time.hours)
-
         # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
         duration = parse_duration(timespan)
         duration_in_minutes = float(duration.time.minutes)
