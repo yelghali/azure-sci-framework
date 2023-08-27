@@ -155,6 +155,10 @@ class AKSPod(AzureImpactNode):
             :param cpu: str, CPU requests or limits, e.g. '100m', '1'.
             :return: float, CPU requests or limits in GB.
             """
+            if cpu is None:
+                Warning("Pod CPU limit is None ; using default value of 1")
+                return 1 # default value
+            cpu = str(cpu)
             if cpu.endswith('m'):
                 return float(cpu[:-1]) / 1000
             else:
@@ -166,6 +170,10 @@ class AKSPod(AzureImpactNode):
             :param memory: str, memory requests or limits, e.g. '64Mi', '1Gi'.
             :return: float, memory requests or limits in GB.
             """
+            if memory is None:
+                Warning("Pod memory limit is None ; using default value of 1")
+                return 1
+            memory = str(memory)
             if memory.endswith('Ki'):
                 return float(memory[:-2]) / (1024 ** 2)
             elif memory.endswith('Mi'):
@@ -178,6 +186,10 @@ class AKSPod(AzureImpactNode):
                 return float(memory[:-2]) * (1024 ** 2)
             elif memory.endswith('Ei'):
                 return float(memory[:-2]) * (1024 ** 3)
+            elif memory.endswith('M'):
+                return float(memory[:-1]) / 1024
+            elif memory.endswith('G'):
+                return float(memory[:-1])
             else:
                 return float(memory) / (1024 ** 3)
 

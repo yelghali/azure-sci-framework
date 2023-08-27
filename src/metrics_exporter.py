@@ -78,7 +78,7 @@ pod_resource_selectors = {
      "cluster_name": "sus-aks-lab",
      #"labels" : {"name" : "keda-operator"},
      #"namespace" : "carbon-aware-keda-operator-system",
-     "namespace" : "keda",
+     #"namespace" : "keda",
      "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
  }
 
