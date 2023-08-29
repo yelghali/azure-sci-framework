@@ -298,7 +298,7 @@ class AKSPod(AzureImpactNode):
 
             node_names = set([pod['node_name'] for pod in pod_list])
 
-            # first we gather the info of the nodes: models, static params, impacts
+            # first we gather the infos for the nodes: models, static params, impacts
             node_tasks = []
             node_static_params_tasks = []
             node_impact_metrics = {}
@@ -316,15 +316,16 @@ class AKSPod(AzureImpactNode):
                 node = AKSNode(name = node_name, model = self.inner_model,  carbon_intensity_provider=self.carbon_intensity_provider, auth_object=self.auth_object, resource_selectors=resource_selectors, metadata=self.metadata)
                 
                 node_models[node_name] = node.inner_model
-                #local_func = lambda: (node.lookup_static_params(), node.calculate());
+
                 node_task = asyncio.create_task(node.calculate())
                 node_static_param_task = asyncio.create_task(node.lookup_static_params())
-                #node_task = asyncio.create_task(local_func)
+
+
                 node_tasks.append(node_task)
                 node_static_params_tasks.append(node_static_param_task)
 
-            node_results = await asyncio.gather(*node_tasks)
             node_static_params_results = await asyncio.gather(*node_static_params_tasks)
+            node_results = await asyncio.gather(*node_tasks)
 
             for i, node_name in enumerate(node_names):
                 node_static_params[node_name] = node_static_params_results[i]
@@ -335,7 +336,6 @@ class AKSPod(AzureImpactNode):
             # the AttributedImpactNodeInterface class is used to calculate the impact of a pod that shares node resources with other pods
             pod_tasks = []
             pods_impact = {}
-            print(pod_observations)
 
             for pod in pod_list:
                 node_name = pod['node_name']

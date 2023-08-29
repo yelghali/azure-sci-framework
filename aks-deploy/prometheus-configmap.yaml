@@ -1,0 +1,14 @@
+kind: ConfigMap
+apiVersion: v1
+data:
+  prometheus-config: |-
+    global:
+      scrape_interval: 15s
+    scrape_configs:
+    - job_name: "azure-sci-exporter-scrap"
+      static_configs:
+        - targets:
+          - "azure-sci-exporter.azure-sci-exporter.svc.cluster.local:8000"
+metadata:
+  name: ama-metrics-prometheus-config
+  namespace: kube-system

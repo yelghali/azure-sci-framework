@@ -1,0 +1,161 @@
+
+
+# The namespace k8s-sci-exporter will run in
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: k8s-sci-exporter
+---
+
+# Service account for permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: k8s-sci-exporter
+  namespace: k8s-sci-exporter
+---
+
+# Cluster role giving k8s-sci-exporter to get, list, watch required resources
+# No write permissions are required
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: k8s-sci-exporter
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - configmaps
+      - deployments
+      - nodes
+      - pods
+      - services
+      - resourcequotas
+      - replicationcontrollers
+      - limitranges
+      - persistentvolumeclaims
+      - persistentvolumes
+      - namespaces
+      - endpoints
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - extensions
+    resources:
+      - daemonsets
+      - deployments
+      - replicasets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets
+      - deployments
+      - daemonsets
+      - replicasets
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+      - jobs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+
+# Bind the role to the service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: k8s-sci-exporter
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: k8s-sci-exporter
+subjects:
+  - kind: ServiceAccount
+    name: k8s-sci-exporter
+    namespace: k8s-sci-exporter
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k8s-sci-exporter
+  namespace: k8s-sci-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: k8s-sci-exporter
+  template:
+    metadata:
+      labels:
+        app: k8s-sci-exporter
+        azure.workload.identity/use: "true"
+    spec:
+      serviceAccountName: k8s-sci-exporter
+      containers:
+      - name: k8s-sci-exporter
+        image: carboncostlab.azurecr.io/k8s-sci-exporter:latest
+        ports:
+        - containerPort: 8000
+        env:
+        # - name : SUBSCRIPTION_ID
+        #   value : 0f4bda7e-1203-4f11-9a85-22653e9af4b4
+        # - name : AKS_RESOURCE_GROUP
+        #   value : sus-aks-lab
+        - name : K8S_CLUSTER_NAME
+          value : aks-costdemo
+        - name : PROMETHEUS_SERVER_ENDPOINT
+          value : http://my-prometheus-server.prometheus.svc
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: k8s-sci-exporter
+  namespace: k8s-sci-exporter
+spec:
+  selector:
+    app: k8s-sci-exporter
+  ports:
+  - name: http
+    port: 8000
+    targetPort: 8000
+  type: ClusterIP
