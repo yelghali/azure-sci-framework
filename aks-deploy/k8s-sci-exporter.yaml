@@ -135,10 +135,10 @@ spec:
         ports:
         - containerPort: 8000
         env:
-        # - name : SUBSCRIPTION_ID
-        #   value : 0f4bda7e-1203-4f11-9a85-22653e9af4b4
-        # - name : AKS_RESOURCE_GROUP
-        #   value : sus-aks-lab
+        - name : SUBSCRIPTION_ID
+          value : 0f4bda7e-1203-4f11-9a85-22653e9af4b4
+        - name : AKS_RESOURCE_GROUP
+          value : aks
         - name : K8S_CLUSTER_NAME
           value : aks-costdemo
         - name : PROMETHEUS_SERVER_ENDPOINT
