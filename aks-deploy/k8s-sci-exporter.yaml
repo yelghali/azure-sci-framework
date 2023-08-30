@@ -128,7 +128,8 @@ spec:
         app: k8s-sci-exporter
         azure.workload.identity/use: "true"
     spec:
-      serviceAccountName: k8s-sci-exporter
+      #serviceAccountName: k8s-sci-exporter
+      serviceAccountName : default
       containers:
       - name: k8s-sci-exporter
         image: carboncostlab.azurecr.io/k8s-sci-exporter:latest
@@ -143,6 +144,14 @@ spec:
           value : aks-costdemo
         - name : PROMETHEUS_SERVER_ENDPOINT
           value : http://my-prometheus-server.prometheus.svc
+        - name: AZURE_CLIENT_ID
+          value: 0794bb09-72b3-4811-a6a9-6455a3a3e1a3
+        - name: AZURE_CLIENT_SECRET
+          value: RLf8Q~WSTWQKqOkRfGgDbd5MmseWcGxdKr~1OcWi
+        - name: AZURE_TENANT_ID
+          value: 16b3c013-d300-468d-ac64-7eda0820b6d3
+        - name: SUBSCRIPTION_ID
+          value: 0f4bda7e-1203-4f11-9a85-22653e9af4b4
 
 
 ---
