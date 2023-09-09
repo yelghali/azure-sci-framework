@@ -113,6 +113,7 @@ subjects:
     namespace: opencost
 ---
 
+
 # Create a deployment for a single cost model pod
 #
 # See environment variables if you would like to add a Prometheus for
