@@ -101,7 +101,7 @@ class ImpactModelPluginInterface(ABC):
 aggregation = MetricAggregationType.AVERAGE
 
 class ImpactNodeInterface(ABC):
-    def __init__(self, name, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, interval : str = "PT5M", timespan : str = "PT1H"):
+    def __init__(self, name, model: ImpactModelPluginInterface = None, carbon_intensity_provider: CarbonIntensityPluginInterface = None, auth_object: AuthParams = {}, resource_selectors: Dict[str, List[str]] = {}, metadata: Dict[str, object] = {}, interval : str = "PT5M", timespan : str = "PT1H", params : Dict[str, object] = {}):
         self.type = "impactnode"
         self.name = name if name is not None else "impactnode"
         self.inner_model = model
@@ -113,6 +113,7 @@ class ImpactNodeInterface(ABC):
         self.observations = None
         self.interval = interval
         self.timespan = timespan
+        self.params = params
 
     # def run(self) -> Dict[str, object]:
     #     self.authenticate(self.auth_object.get_auth_params())

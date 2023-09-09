@@ -7,7 +7,7 @@ services:
       dockerfile: ief-api-Dockerfile
     ports:
       - "8081:8000"
-    env_file:
+    env_file: #service principal credentials
       - .env
 
   ief_metrics_exporter:
@@ -16,10 +16,15 @@ services:
       dockerfile: ief-metrics-exporter-Dockerfile
     ports:
       - "8000:8000"
-    #volumes:
-    #  - ./kubeconfig:/root/.kube/config
-    env_file:
+    env_file: #service principal credentials
       - .env
+    environment:
+      - SUBSCRIPTION_ID=0f4bda7e-1203-4f11-9a85-22653e9af4b4
+      - AKS_RESOURCE_GROUP=aks
+      - AKS_CLUSTER_NAME=aks-costdemo
+      - AKS_PROMETHEUS_ENDPOINT=http://localhost:80
+      - OPENCOST_API_URL=http://localhost:9003
+      - KUBELOGIN_AUTH_METHOD=spn
 
   prometheus:
     image: prom/prometheus:v2.30.3

@@ -1,9 +1,13 @@
 # Use an official Python runtime as a parent image
 FROM python:3.9-slim-buster
 
+# Install the curl package
+RUN apt-get update && apt-get install -y curl unzip
+
 
 # Install the Azure CLI
 RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
 
 # Set the working directory to /app
 WORKDIR /app
@@ -17,8 +21,16 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of the application code into the container
 COPY . .
 
+# Install kubelogin
+RUN curl -LO https://github.com/Azure/kubelogin/releases/download/v0.0.32/kubelogin-linux-amd64.zip && \
+    unzip kubelogin-linux-amd64.zip && \
+    mv bin/linux_amd64/kubelogin /usr/local/bin && \
+    rm -rf kubelogin-linux-amd64.zip bin
+
+
 # Expose the port that the application will listen on
 EXPOSE 8000
 
 # Start the application
 CMD ["python", "metrics_exporter.py"]
+#CMD ["python", "dev.py"]
