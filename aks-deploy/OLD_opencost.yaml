@@ -1,0 +1,220 @@
+# <https://www.opencost.io/docs/>
+---
+
+# The namespace OpenCost will run in
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: opencost
+---
+
+# Service account for permissions
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    azure.workload.identity/client-id: c192f283-77d4-4cd8-9c86-7e7f68354889
+  name: opencost
+  namespace: opencost
+# ---
+
+# # Cluster role giving OpenCost to get, list, watch required resources
+# # No write permissions are required
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRole
+# metadata:
+#   name: opencost
+# rules:
+#   - apiGroups:
+#       - ''
+#     resources:
+#       - configmaps
+#       - deployments
+#       - nodes
+#       - pods
+#       - services
+#       - resourcequotas
+#       - replicationcontrollers
+#       - limitranges
+#       - persistentvolumeclaims
+#       - persistentvolumes
+#       - namespaces
+#       - endpoints
+#     verbs:
+#       - get
+#       - list
+#       - watch
+#   - apiGroups:
+#       - extensions
+#     resources:
+#       - daemonsets
+#       - deployments
+#       - replicasets
+#     verbs:
+#       - get
+#       - list
+#       - watch
+#   - apiGroups:
+#       - apps
+#     resources:
+#       - statefulsets
+#       - deployments
+#       - daemonsets
+#       - replicasets
+#     verbs:
+#       - list
+#       - watch
+#   - apiGroups:
+#       - batch
+#     resources:
+#       - cronjobs
+#       - jobs
+#     verbs:
+#       - get
+#       - list
+#       - watch
+#   - apiGroups:
+#       - autoscaling
+#     resources:
+#       - horizontalpodautoscalers
+#     verbs:
+#       - get
+#       - list
+#       - watch
+#   - apiGroups:
+#       - policy
+#     resources:
+#       - poddisruptionbudgets
+#     verbs:
+#       - get
+#       - list
+#       - watch
+#   - apiGroups:
+#       - storage.k8s.io
+#     resources:
+#       - storageclasses
+#     verbs:
+#       - get
+#       - list
+#       - watch
+
+# ---
+
+# # Bind the role to the service account
+# apiVersion: rbac.authorization.k8s.io/v1
+# kind: ClusterRoleBinding
+# metadata:
+#   name: opencost
+# roleRef:
+#   apiGroup: rbac.authorization.k8s.io
+#   kind: ClusterRole
+#   name: opencost
+# subjects:
+#   - kind: ServiceAccount
+#     name: opencost
+#     namespace: opencost
+---
+
+# Create a deployment for a single cost model pod
+#
+# See environment variables if you would like to add a Prometheus for
+# cost model to read from for full functionality.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opencost
+  namespace: opencost
+  labels:
+    app: opencost
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opencost
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: opencost
+        azure.workload.identity/use: "true"
+    spec:
+      restartPolicy: Always
+      serviceAccountName: opencost
+      containers:
+        - image: quay.io/kubecost1/kubecost-cost-model:latest
+          name: opencost
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "55M"
+            limits:
+              cpu: "999m"
+              memory: "1G"
+          env:
+            - name: PROMETHEUS_SERVER_ENDPOINT
+              value: "http://my-prometheus-server.prometheus.svc" # The endpoint should have the form http://<service-name>.<namespace-name>.svc
+            - name: CLOUD_PROVIDER_API_KEY
+              value: "AIzaSyD29bGxmHAVEOBYtgd8sYM2gM2ekfxQX4U" # The GCP Pricing API requires a key. This is supplied just for evaluation.
+            - name: CLUSTER_ID
+              value: "default-cluster" # Default cluster ID to use if cluster_id is not set in Prometheus metrics.
+            - name: AZURE_CLIENT_ID
+              value: c192f283-77d4-4cd8-9c86-7e7f68354889
+            # - name: AZURE_CLIENT_ID
+            #   value: 0794bb09-72b3-4811-a6a9-6455a3a3e1a3
+            # - name: AZURE_CLIENT_SECRET
+            #   value: RLf8Q~WSTWQKqOkRfGgDbd5MmseWcGxdKr~1OcWi
+            # - name: AAD_SERVICE_PRINCIPAL_CLIENT_ID
+            #   value: 0794bb09-72b3-4811-a6a9-6455a3a3e1a3
+            # - name: AAD_SERVICE_PRINCIPAL_CLIENT_SECRET
+            #   value: RLf8Q~WSTWQKqOkRfGgDbd5MmseWcGxdKr~1OcWi
+            # - name: AZURE_TENANT_ID
+            #   value: 16b3c013-d300-468d-ac64-7eda0820b6d3
+            # - name: AZURE_SUBSCRIPTION_ID
+            #   value: 0f4bda7e-1203-4f11-9a85-22653e9af4b4
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsUser: 1001
+        - image: quay.io/kubecost1/opencost-ui:latest
+          name: opencost-ui
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "55M"
+            limits:
+              cpu: "999m"
+              memory: "1G"
+          imagePullPolicy: Always
+---
+
+# Expose the cost model with a service
+#
+# Without a Prometheus endpoint configured in the deployment,
+# only opencost/metrics will have useful data as it is intended
+# to be used as only an exporter.
+kind: Service
+apiVersion: v1
+metadata:
+  name: opencost
+  namespace: opencost
+spec:
+  selector:
+    app: opencost
+  type: ClusterIP
+  ports:
+    - name: opencost
+      port: 9003
+      targetPort: 9003
+    - name: opencost-ui
+      port: 9090
+      targetPort: 9090
+---

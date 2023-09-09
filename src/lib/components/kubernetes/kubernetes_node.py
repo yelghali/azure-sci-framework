@@ -12,6 +12,19 @@ import re
 import csv
 import os
 import io
+import subprocess
+import json
+
+from azure.identity import ClientSecretCredential
+
+from azure.mgmt.monitor import MonitorManagementClient
+from azure.mgmt.monitor.models import MetricAggregationType
+from azure.mgmt.containerservice import ContainerServiceClient
+from azure.identity import DefaultAzureCredential
+
+
+OPENCOST_API_URL = os.environ.get("OPENCOST_API_URL", "http://opencost.opencost.svc:9003").rstrip("/")
+OPENCOST_API_URL = os.environ.get("OPENCOST_API_URL", "http://localhost:9003").rstrip("/")
 
 
 class KubernetesNode(ImpactNodeInterface):
@@ -24,6 +37,7 @@ class KubernetesNode(ImpactNodeInterface):
         self.static_params = {}
         self.properties = {}
         self.prometheus_url = params.get("prometheus_server_endpoint", None)
+        self.credential = DefaultAzureCredential()
 
         self.validate_configuration()
 
@@ -43,15 +57,101 @@ class KubernetesNode(ImpactNodeInterface):
     #     return resource_uri
 
 
-    async def authenticate(self, auth_params: Dict[str, object]) -> None:
-        pass
+    async def azure_authenticate(self, auth_params: Dict[str, object] = {}) -> None:
+        subscription_id = self.resource_selectors.get("subscription_id", None)
+        resource_group_name = self.resource_selectors.get("resource_group", None)
+        cluster_name = self.resource_selectors.get("cluster_name", None)
+        container_service_client = ContainerServiceClient(self.credential, subscription_id)
+        
+        kubeconfig = container_service_client.managed_clusters.list_cluster_user_credentials(resource_group_name, cluster_name).kubeconfigs[0].value
+
+        kubeconfig_stream = io.BytesIO(kubeconfig)
+        kubeconfig_dict = yaml.safe_load(kubeconfig_stream)
+        
+
+        # Get the name of the current context and cluster from the kubeconfig dict
+        #current_context = kubeconfig_dict["current-context"]
+        #current_cluster = kubeconfig_dict["contexts"][0]["context"]["cluster"]
+
+
+        # Load the Kubernetes configuration from the kubeconfig
+        loader = KubeConfigLoader(config_dict=kubeconfig_dict)
+        configuration = client.Configuration()
+        loader.load_and_set(configuration)
+        client.Configuration.set_default(configuration)
+        print("Kubernetes azure auth configuration set successfully.")
+
+
+    async def kubelogin_azure_authenticate(self):
+
+        subscription_id = self.resource_selectors.get("subscription_id", None)
+        resource_group_name = self.resource_selectors.get("resource_group", None)
+        cluster_name = self.resource_selectors.get("cluster_name", None)
+        # Authenticate with Azure and get the kubeconfig for the cluster
+
+        
+        TENANT_ID = os.environ.get("AZURE_TENANT_ID", None)
+        CLIENT_ID = os.environ.get("AZURE_CLIENT_ID", None)
+        CLIENT_SECRET = os.environ.get("AZURE_CLIENT_SECRET", None)
+        #check that the credentials are not None, otherwise use the default credential and send a warning message
+        try:
+            print("using default Azure credential")
+            credential = DefaultAzureCredential()
+        except Exception as e:
+            print(f"Error loading DefaultAzureCredential: {e}")
+            print("using service principal credential")
+            credential = ClientSecretCredential(TENANT_ID, CLIENT_ID, CLIENT_SECRET)
+
+        container_service_client = ContainerServiceClient(credential, subscription_id)
+
+        kubeconfig = container_service_client.managed_clusters.list_cluster_user_credentials(resource_group_name, cluster_name).kubeconfigs[0].value
+
+        # Load the kubeconfig into a dictionary
+        kubeconfig_stream = io.BytesIO(kubeconfig)
+        kubeconfig_dict = yaml.safe_load(kubeconfig_stream)
+
+
+        # Load the Kubernetes configuration from the updated kubeconfig
+        loader = KubeConfigLoader(config_dict=kubeconfig_dict)
+        configuration = client.Configuration()
+        loader.load_and_set(configuration)
+        client.Configuration.set_default(configuration)
+        
+        # Update the kubeconfig to use the service principal for authentication
+        #subprocess.run(["kubelogin", "convert-kubeconfig", "-l", "spn", "--client-id", spn_client_id, "--client-secret", spn_client_secret])
+        subprocess.run(["kubelogin", "convert-kubeconfig", "-l", "spn"])
+
+        print("authentication successful using kubelogin_azure_authenticate")
+
+
+    async def kub_authenticate(self, auth_params: Dict[str, object] = {}) -> None:
+        # Load the Kubernetes configuration from the default location
+        try:
+            config.load_kube_config()
+        except Exception as e:
+            raise Exception(f"Error loading Kubernetes configuration: {e}")
+        print("Kubernetes configuration loaded successfully.")
+
+    async def authenticate(self, auth_params: Dict[str, object] = {}) -> None:
+        try:
+            await self.kub_authenticate()
+        except Exception as e:
+            print(f"Error authenticating to Kubernetes cluster: {e}")
+            print("Trying to authenticate to Azure instead...")
+            try:    
+                await self.kubelogin_azure_authenticate()
+            except Exception as e:
+                raise Exception(f"Error authenticating to Azure cluster: {e}")
+        print("Kubernetes authentication successful.")
 
     async def fetch_resources(self) -> Dict[str, Any]:
-        # Load the Kubernetes configuration from the default location
-        config.load_kube_config()
-
+        await self.authenticate()
+        
         # Create a Kubernetes API client for the CoreV1Api
         api_client = client.CoreV1Api()
+
+        # Create a Kubernetes API client for the CoreV1Api
+        #api_client = client.CoreV1Api()
 
         # Query the Kubernetes API server for the list of nodes in the cluster
         if "nodepool_name" in self.resource_selectors:
@@ -106,44 +206,75 @@ class KubernetesNode(ImpactNodeInterface):
         return node_properties
 
 
+    #fetch CPU, RAM & GPU usage metrics from opencost API
     async def fetch_observations(self) -> Dict[str, object]:
         if not self.resources or self.resources == {}:
             await self.fetch_resources()
 
+        
         timespan = self.timespan.lower().replace("pt", "")
         interval = self.interval.lower().replace("pt", "")
+
+        url = "%s/allocation/compute?window=%s&resolution=%s&aggregate=node" % (OPENCOST_API_URL, timespan, interval)
+        print("fetching CPU, RAM, GPU usage from opencost API : %s" % url)
+
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()["data"][0]
+            observations = {}
+            for node_name, item in data.items():
+                if node_name in self.resources.keys():
+                    cpu_util = float(item["cpuCoreUsageAverage"]) 
+                    avg_memory_gb = float(item["ramByteUsageAverage"] / (1024 ** 3))
+
+                    observations[node_name] = {
+                        "average_cpu_percentage": cpu_util, 
+                      "average_memory_gb": avg_memory_gb,
+                        "average_gpu_percentage" : 0 #TODO: add gpu
+                      }
+            self.observations = observations
+            return observations
+        else:
+            raise Exception(f"Error fetching observations from {url}: {response.status_code} {response.text}")
+
+    # async def fetch_observations2(self) -> Dict[str, object]:
+    #     if not self.resources or self.resources == {}:
+    #         await self.fetch_resources()
+
+    #     timespan = self.timespan.lower().replace("pt", "")
+    #     interval = self.interval.lower().replace("pt", "")
  
-        cpu_query = f'(100 - avg by (node) (irate(node_cpu_seconds_total{{mode="idle"}}[{interval}]))) * 100'
-        memory_query = f'avg by (node) ((node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / 1024 / 1024 / 1024)'
+    #     cpu_query = f'(100 - avg by (node) (irate(node_cpu_seconds_total{{mode="idle"}}[{interval}]))) * 100'
+    #     memory_query = f'avg by (node) ((node_memory_MemTotal_bytes - node_memory_MemFree_bytes - node_memory_Buffers_bytes - node_memory_Cached_bytes) / 1024 / 1024 / 1024)'
 
-        cpu_data = await self.query_prometheus(cpu_query, interval=interval)
-        memory_data = await self.query_prometheus(memory_query, interval=interval)
+    #     cpu_data = await self.query_prometheus(cpu_query, interval=interval)
+    #     memory_data = await self.query_prometheus(memory_query, interval=interval)
 
 
-        observations = {}
-        for node_name, node in self.resources.items():
-            cpu_percentage = None
-            memory_GB = None
+    #     observations = {}
+    #     for node_name, node in self.resources.items():
+    #         cpu_percentage = None
+    #         memory_GB = None
 
-            for cpu_result in cpu_data:
-                if cpu_result['metric']['node'] == node_name:
-                    cpu_percentage = float(cpu_result['value'][1])
-                    break
+    #         for cpu_result in cpu_data:
+    #             if cpu_result['metric']['node'] == node_name:
+    #                 cpu_percentage = float(cpu_result['value'][1])
+    #                 break
 
-            for memory_result in memory_data:
-                if memory_result['metric']['node'] == node_name:
-                    memory_GB = float(memory_result['value'][1])
-                    break
+    #         for memory_result in memory_data:
+    #             if memory_result['metric']['node'] == node_name:
+    #                 memory_GB = float(memory_result['value'][1])
+    #                 break
 
-            observations[node_name] = {
-                'average_cpu_percentage': cpu_percentage,
-                'average_memory_gb': memory_GB,
-                'average_gpu_percentage' : 0 #TODO: add gpu
+    #         observations[node_name] = {
+    #             'average_cpu_percentage': cpu_percentage,
+    #             'average_memory_gb': memory_GB,
+    #             'average_gpu_percentage' : 0 #TODO: add gpu
 
-            }
+    #         }
 
-        self.observations = observations
-        return observations
+    #     self.observations = observations
+    #     return observations
 
 
     async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:

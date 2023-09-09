@@ -65,13 +65,13 @@ interval = "PT5M"
 
 
 
-# vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  
-#              carbon_intensity_provider=None, 
-#              auth_object=auth_params, 
-#              resource_selectors=vm_resource_selectors, 
-#              metadata=metadata,
-#              timespan=timespan,
-#              interval=interval)
+vm = AzureVM(name = "mywebserver", model = ComputeServer_STATIC_IMP(),  
+             carbon_intensity_provider=None, 
+             auth_object=auth_params, 
+             resource_selectors=vm_resource_selectors, 
+             metadata=metadata,
+             timespan=timespan,
+             interval=interval)
 
 
 # manual_observations = {
@@ -104,7 +104,12 @@ interval = "PT5M"
 
 # print(node.calculate())
 
+import os
 
+KUBELOGIN_AUTH_METHOD = os.environ.get("KUBELOGIN_AUTH_METHOD", "spn")
+os.environ["AAD_LOGIN_METHOD"] = KUBELOGIN_AUTH_METHOD
+
+PROMETHEUS_SERVER_ENDPOINT = os.environ.get("PROMETHEUS_SERVER_ENDPOINT", "http://localhost")
 
 
 async def main1():
@@ -114,13 +119,16 @@ async def main1():
     # carbonIntensityProvider.auth(auth_params)
     # carbonIntensityProvider.configure({"namespace": "kube-system", "config_map_name": "carbon-intensity"})
  
-    # node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=carbonIntensityProvider, auth_object=auth_params, resource_selectors=node_resource_selectors, metadata=metadata, timespan=timespan, interval=interval)
+    # node = AKSNode(name = "myaksclsuter", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=None, auth_object=auth_params, resource_selectors=node_resource_selectors, metadata=metadata, timespan=timespan, interval=interval)
+    # uuu = await node.calculate()
+    # print(uuu)
+
 
     params = {
         "namespace": "kube-system",
         "config_map_name": "carbon-intensity",
-        "prometheus_server_endpoint": "http://localhost"
-    }
+        "prometheus_server_endpoint": PROMETHEUS_SERVER_ENDPOINT
+                }
 
     k8snode = KubernetesNode(name = "my-aks-cluster", model = ComputeServer_STATIC_IMP(),  
              carbon_intensity_provider=None, 
@@ -131,21 +139,25 @@ async def main1():
              interval=interval,
              params=params)
 
-    toto = await k8snode.calculate()
-    print(toto)
+
+    while(True):
+        toto = await k8snode.calculate()
+        #toto = await k8snode.fetch_observations()
+        print(toto)
+        time.sleep(300)
 
 
+    # toto = await vm.fetch_resources()
+    # print(toto)
+    # tata = await vm.lookup_static_params()
+    # print(tata)
 
-#     # toto = await vm.fetch_resources()
-#     # print(toto)
-#     # tata = await vm.lookup_static_params()
-#     # print(tata)
 
+    # #tutu = await vm.fetch_observations()
+    # #print(tutu)
+    # uuu = await vm.calculate()
+    # print(uuu)
 
-#     # #tutu = await vm.fetch_observations()
-#     # #print(tutu)
-#     # uuu = await vm.calculate()
-#     # print(uuu)
 
     # await node.fetch_resources()
     # toto = await node.lookup_static_params()

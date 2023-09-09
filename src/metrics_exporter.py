@@ -27,15 +27,21 @@ metadata = {
 timespan = os.environ.get("TIMESPAN", "PT5M")
 interval = os.environ.get("INTERVAL", "PT5M")
 
+KUBELOGIN_AUTH_METHOD = os.environ.get("KUBELOGIN_AUTH_METHOD", "spn")
+os.environ["AAD_LOGIN_METHOD"] = KUBELOGIN_AUTH_METHOD
 
-subscription_id = os.environ.get("SUBSCRIPTION_ID", None)
-resource_group = os.environ.get("AKS_RESOURCE_GROUP", None)
-cluster_name = os.environ.get("K8S_CLUSTER_NAME", None)
+PROMETHEUS_SERVER_ENDPOINT = os.environ.get("PROMETHEUS_SERVER_ENDPOINT", "http://localhost")
+
+
+
+subscription_id = os.environ.get("SUBSCRIPTION_ID", "0f4bda7e-1203-4f11-9a85-22653e9af4b4")
+resource_group = os.environ.get("AKS_RESOURCE_GROUP", "aks")
+cluster_name = os.environ.get("K8S_CLUSTER_NAME", "aks-costdemo")
 prometheus_endpoint = os.environ.get("PROMETHEUS_SERVER_ENDPOINT", None)
 
 carbon_intensity_config_map_name = os.environ.get("CARBON_INTENSITY_CONFIG_MAP_NAME", "carbon-intensity")
 carbon_intensity_config_map_namespace = os.environ.get("CARBON_INTENSITY_CONFIG_MAP_NAMESPACE", "kube-system")
-carbonIntensityProvider_name = os.environ.get("CARBON_INTENSITY_PROVIDER")
+carbonIntensityProvider_name = os.environ.get("CARBON_INTENSITY_PROVIDER", None)
 
 vm_resource_selectors = {
     "subscription_id": subscription_id,
@@ -111,10 +117,15 @@ params = {
 # Program entry point
 if __name__ == '__main__':
 
-    # carbonIntensityProvider = CarbonIntensityKubernetesConfigMap(node_resource_selectors)
-    # carbonIntensityProvider.auth(auth_params)
-    # carbonIntensityProvider.configure({"namespace": carbon_intensity_config_map_namespace, "config_map_name": carbon_intensity_config_map_name})
- 
+    if carbonIntensityProvider_name == "CarbonIntensityKubernetesConfigMap":
+        print("Using CarbonIntensityKubernetesConfigMap")
+        carbonIntensityProvider = CarbonIntensityKubernetesConfigMap(node_resource_selectors)
+        carbonIntensityProvider.auth(auth_params)
+        carbonIntensityProvider.configure({"namespace": carbon_intensity_config_map_namespace, "config_map_name": carbon_intensity_config_map_name})
+    else:
+        print("No carbon intensity provider ; using carbon intensity default value : 100 gCO2eq/kWh")
+        carbonIntensityProvider = None
+    
 
     #static method
     MetricsExporter.start_http_server(port=8000)
@@ -150,7 +161,7 @@ if __name__ == '__main__':
     
     impact_nodes = [
             KubernetesNode(name = "my-aks-cluster", model = ComputeServer_STATIC_IMP(),  
-             carbon_intensity_provider=None, 
+             carbon_intensity_provider=carbonIntensityProvider, 
              auth_object=auth_params, 
              resource_selectors=node_resource_selectors, 
              metadata=metadata,

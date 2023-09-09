@@ -9,6 +9,14 @@ data:
       static_configs:
         - targets:
           - "azure-sci-exporter.azure-sci-exporter.svc.cluster.local:8000"
+    - job_name: opencost
+      scrape_interval: 1m
+      scrape_timeout: 10s
+      metrics_path: /metrics
+      scheme: http
+      static_configs:
+        - targets: 
+         - 'opencost.opencost:9003'
 metadata:
   name: ama-metrics-prometheus-config
   namespace: kube-system
