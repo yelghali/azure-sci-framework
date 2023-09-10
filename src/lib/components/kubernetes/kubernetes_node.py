@@ -227,6 +227,8 @@ class KubernetesNode(ImpactNodeInterface):
                     cpu_util = float(item["cpuCoreUsageAverage"]) * 100 #convert to percentage
                     memory_gb = float(item["ramByteUsageAverage"] / (1024 ** 3)) #convert to GB
 
+                    rr =self.static_params[node_name]["instance_vcpus"]
+
                     observations[node_name] = {
                     #     "average_cpu_percentage": cpu_util, 
                     #   "average_memory_gb": avg_memory_gb,
@@ -234,9 +236,9 @@ class KubernetesNode(ImpactNodeInterface):
                                 "average_cpu_percentage": cpu_util, 
                                 "cpuCoreUsageAverage" : float(item["cpuCoreUsageAverage"]), 
                                 "cpuCoreHours" : float(item["cpuCoreHours"]),
-                                "tr" : float(item["cpuCoreHours"]),
+                                #"tr" : float(item["cpuCoreHours"]),
                                 "cpuCores" : float(item["cpuCores"]),
-                                "rr" : float(item["cpuCores"]),
+                                "rr" : rr,  # for nodes, rr = instance_vcpus
                                 "memory_gb": memory_gb,
                                 "ramByteUsageAverage" : float(item["ramByteUsageAverage"]),
                                 "ramByteHours" : float(item["ramByteHours"]),

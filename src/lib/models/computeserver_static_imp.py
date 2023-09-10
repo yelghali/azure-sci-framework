@@ -45,34 +45,46 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         power_consumption = tdp * tdp_coefficient
 
 
-        if cpu_core_hours is None:
-            # we assume the software has been running during the whole timespan
-            # for practical calculation, we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
-            duration = parse_duration(timespan)
-            duration_in_minutes = float(duration.time.minutes)
-            duration_in_hours = duration_in_minutes / 60.0
+        #if cpu_core_hours is None:
+        # we assume the software has been running during the whole timespan
+        # for practical calculation, we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
+        duration = parse_duration(timespan)
+        duration_in_minutes = float(duration.time.minutes)
+        duration_in_hours = duration_in_minutes / 60.0
 
-            if hasattr(duration.time, 'hours'):
-                duration_in_hours += float(duration.time.hours)
+        if hasattr(duration.time, 'hours'):
+            duration_in_hours += float(duration.time.hours)
 
-            if hasattr(duration.time, 'days'):
-                duration_in_hours += float(duration.time.days) * 24.0
-        else:
-            duration_in_hours = cpu_core_hours
+        if hasattr(duration.time, 'days'):
+            duration_in_hours += float(duration.time.days) * 24.0
+        
+        #else:
+        #    duration_in_hours = cpu_core_hours
         
         
         energy_consumption = core_count * (power_consumption * duration_in_hours / 1000) # W * H / 1000 = KWH
         return energy_consumption
 
 
-    def calculate_emem(self, ram_size_gb_during_timespan):
+    def calculate_emem(self, ram_size_gb_during_timespan, timespan='PT1H'):
         if ram_size_gb_during_timespan <= 0:
             warnings.warn("RAM size must be a positive number")
             return 0
 
-        energy_per_gb = 0.38  # kWh per GB
+        duration = parse_duration(timespan)
+        duration_in_minutes = float(duration.time.minutes)
+        duration_in_hours = duration_in_minutes / 60.0
 
-        energy_consumption = energy_per_gb * ram_size_gb_during_timespan # kWh per GB * GB = kWh
+        if hasattr(duration.time, 'hours'):
+            duration_in_hours += float(duration.time.hours)
+
+        if hasattr(duration.time, 'days'):
+            duration_in_hours += float(duration.time.days) * 24.0
+
+
+        energy_per_gb = 0.38  # Watt per GB
+
+        energy_consumption = energy_per_gb * ram_size_gb_during_timespan / 1000 # kWh per GB * GB = kWh
         return energy_consumption
 
 
@@ -108,25 +120,25 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
 
         # TR: Time reserved for use by the software
-        if tr is None: #we assume software was always running for the given timespan
-            warnings.warn(f"TR is not set. we assume software was always running for the given timespan : {timespan}")
-            tr = 1  # initial value is 1 hour , if non is found below
-            
-            # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
-            duration = parse_duration(timespan)
-            duration_in_minutes = float(duration.time.minutes)
-            duration_in_hours = duration_in_minutes / 60.0
+        #if tr is None: #we assume software was always running for the given timespan
+        #    warnings.warn(f"TR is not set. we assume software was always running for the given timespan : {timespan}")
+        tr = 1  # initial value is 1 hour , if non is found below
+        
+        # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
+        duration = parse_duration(timespan)
+        duration_in_minutes = float(duration.time.minutes)
+        duration_in_hours = duration_in_minutes / 60.0
 
-            if hasattr(duration.time, 'hours'):
-                duration_in_hours += float(duration.time.hours)
+        if hasattr(duration.time, 'hours'):
+            duration_in_hours += float(duration.time.hours)
 
-            if hasattr(duration.time, 'days'):
-                duration_in_hours += float(duration.time.days) * 24.0
+        if hasattr(duration.time, 'days'):
+            duration_in_hours += float(duration.time.days) * 24.0
 
 
-            if duration_in_hours : tr = duration_in_hours
-        else :
-            tr = tr
+        if duration_in_hours : tr = duration_in_hours
+        # else :
+        #     tr = tr
 
         # EL: Expected lifespan of the equipment
         el = 35040  # hours (4 years)
@@ -174,12 +186,11 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             # if we have cpucores used from observations, we use it 
             rr = resource_observations.get("rr", None)
             if rr is None:
-                # else we use the static value which corresponds to the cpu capacity allocated (not the actual used cpu cores)
                 rr = static_params.get(resource_name, {}).get("instance_vcpus", 2) or 2 #used to calculate E and M metrics
                 warnings.warn(f"cpuCores (rr) is not set. we use rr = the vcpu allocated capacity, instead of the actual vcpu used : rr = instance_vcpus {rr}")
 
             #time reserved for use by the software ; e.g : if the software is running for whole 5 minutes, then tr = 5
-            tr = resource_observations.get("tr", None)
+            tr = resource_observations.get("tr", None) 
             
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
             ecpu = self.calculate_ecpu(cpu_util, timespan=timespan, tdp=tdp, core_count=rr, cpu_core_hours=tr)

@@ -34,7 +34,7 @@ pod_resource_selectors = {
     "cluster_name": "aks-costdemo",
      #"labels" : {"name" : "keda-operator"},
      #"namespace" : "carbon-aware-keda-operator-system",
-     "namespace" : "default",
+     "namespace" : "opencost",
      "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
  }
 
