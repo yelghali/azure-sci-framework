@@ -292,14 +292,14 @@ class AttributedImpactNodeInterface(ABC):
 
         #how many cpu cores are allocated to the self resource (rr resources reserved), and for how long (tr time reserved)
         rr = observations.get("rr", 1)
-        tr = observations.get("tr", 1)
+        tr = observations.get("tr", None)
 
         #add tdp to self static params
         self_static_parms["host_sku_tdp"] = tdp
         print("total_vc : %s" % total_vc)
 
        # Energy
-        E_CPU = host_node_model.calculate_ecpu(cpu_util, timespan=self.timespan, tdp=tdp, core_count=rr, cpu_core_hours=tr)
+        E_CPU = host_node_model.calculate_ecpu(cpu_util, timespan=self.timespan, tdp=tdp, core_count=rr, tr=tr)
         E_MEM = host_node_model.calculate_emem(memory_gb)
         E_GPU = 0 # TODO
         E = E_CPU + E_MEM + E_GPU

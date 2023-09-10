@@ -279,7 +279,7 @@ class KubernetesPod(KubernetesNode):
                                 "average_cpu_percentage": cpu_util, 
                                 "cpuCoreUsageAverage" : float(item["cpuCoreUsageAverage"]), 
                                 "cpuCoreHours" : float(item["cpuCoreHours"]),
-                                "tr" : float(item["cpuCoreHours"]),
+                                #"tr" : float(item["cpuCoreHours"]),
                                 "cpuCores" : float(item["cpuCores"]),
                                 "rr" : float(item["cpuCores"]),
                                 "memory_gb": memory_gb,
