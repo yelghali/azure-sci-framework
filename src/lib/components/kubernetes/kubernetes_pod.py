@@ -272,16 +272,18 @@ class KubernetesPod(KubernetesNode):
                 for api_results_pod_name, item in data.items():
                     for selected_pod_name in selected_pod_names:
                         if selected_pod_name in api_results_pod_name: # if is a substring
-                            cpu_util = float(item["cpuCoreUsageAverage"]) 
-                            memory_gb = float(item["ramBytes"] / (1024 ** 3))
+                            cpu_util = float(item["cpuCoreUsageAverage"]) * 100 #convert to percentage
+                            memory_gb = float(item["ramByteUsageAverage"] / (1024 ** 3)) #convert to GB
 
                             observations[selected_pod_name] = {
                                 "average_cpu_percentage": cpu_util, 
+                                "cpuCoreUsageAverage" : float(item["cpuCoreUsageAverage"]), 
                                 "cpuCoreHours" : float(item["cpuCoreHours"]),
                                 "tr" : float(item["cpuCoreHours"]),
                                 "cpuCores" : float(item["cpuCores"]),
                                 "rr" : float(item["cpuCores"]),
                                 "memory_gb": memory_gb,
+                                "ramByteUsageAverage" : float(item["ramByteUsageAverage"]),
                                 "ramByteHours" : float(item["ramByteHours"]),
                                 "ramBytes" : float(item["ramBytes"]),
                                 "average_gpu_percentage" : 0, #gpu_utilization TODO
