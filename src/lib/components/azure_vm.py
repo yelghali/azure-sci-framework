@@ -188,7 +188,7 @@ class AzureVM(AzureImpactNode):
             resource_name = resource_names[i//2]
             self.observations[resource_name] = {
                 'average_cpu_percentage': cpu_utilization,
-                'average_memory_gb': memory_utilization,
+                'memory_gb': memory_utilization,
                 'average_gpu_percentage': gpu_utilization
             }
 
@@ -275,13 +275,13 @@ class AzureVM(AzureImpactNode):
             if resource.type == 'Microsoft.Compute/virtualMachines':
                 vm_name = resource.name
                 vm_sku_tdp = results[i]
-                rr, total_vcpus, instance_memory = results[i+1]
+                instance_vcpus, total_vcpus, instance_memory = results[i+1]
                 te = results[i+2]
 
                 self.static_params[vm_name] = {
                     'vm_sku': resource.hardware_profile.vm_size,
                     'vm_sku_tdp': vm_sku_tdp,
-                    'rr': rr,
+                    'instance_vcpus': instance_vcpus,
                     'total_vcpus': total_vcpus,
                     'te': te,
                     'instance_memory': instance_memory

@@ -26,7 +26,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         pass
 
 
-    def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H', core_count=2):
+    def calculate_ecpu(self, cpu_utilization_during_timespan, tdp=200, timespan='PT1H', core_count=2, cpu_core_hours=None):
         if tdp <= 0 or core_count <= 0:
             warnings.warn("TDP must be a positive number")
             return 0
@@ -45,20 +45,20 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         power_consumption = tdp * tdp_coefficient
 
 
-        #duration = parse_duration(timespan)
-        #duration_in_hours = float(duration.time.hours)
-        
-        # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
-        duration = parse_duration(timespan)
-        duration_in_minutes = float(duration.time.minutes)
-        duration_in_hours = duration_in_minutes / 60.0
+        if cpu_core_hours is None:
+            # we assume the software has been running during the whole timespan
+            # for practical calculation, we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
+            duration = parse_duration(timespan)
+            duration_in_minutes = float(duration.time.minutes)
+            duration_in_hours = duration_in_minutes / 60.0
 
-        if hasattr(duration.time, 'hours'):
-            duration_in_hours += float(duration.time.hours)
+            if hasattr(duration.time, 'hours'):
+                duration_in_hours += float(duration.time.hours)
 
-        if hasattr(duration.time, 'days'):
-            duration_in_hours += float(duration.time.days) * 24.0
-        
+            if hasattr(duration.time, 'days'):
+                duration_in_hours += float(duration.time.days) * 24.0
+        else:
+            duration_in_hours = cpu_core_hours
         
         
         energy_consumption = core_count * (power_consumption * duration_in_hours / 1000) # W * H / 1000 = KWH
@@ -110,7 +110,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         # TR: Time reserved for use by the software
         if tr is None: #we assume software was always running for the given timespan
             warnings.warn(f"TR is not set. we assume software was always running for the given timespan : {timespan}")
-            tr = 1  # 1 hour, default value
+            tr = 1  # initial value is 1 hour , if non is found below
             
             # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
             duration = parse_duration(timespan)
@@ -165,15 +165,24 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         for resource_name, resource_observations in observations.items():
             # Get the CPU utilization, memory utilization, and GPU utilization from the observations
             cpu_util = resource_observations.get("average_cpu_percentage", 0)
-            mem_util = resource_observations.get("average_memory_gb", 0)
+            mem_util = resource_observations.get("memory_gb", 0)
             gpu_util = resource_observations.get("average_gpu_percentage", 0)
 
             tdp = static_params.get(resource_name, {}).get("vm_sku_tdp", 200) or 200 # used for E-CPU and E-GPU metrics
 
-            rr = static_params.get(resource_name, {}).get("rr", 2) or 2 #used to calculate E and M metrics
+            # resources resrved, aka cpu core used by software
+            # if we have cpucores used from observations, we use it 
+            rr = resource_observations.get("rr", None)
+            if rr is None:
+                # else we use the static value which corresponds to the cpu capacity allocated (not the actual used cpu cores)
+                rr = static_params.get(resource_name, {}).get("instance_vcpus", 2) or 2 #used to calculate E and M metrics
+                warnings.warn(f"cpuCores (rr) is not set. we use rr = the vcpu allocated capacity, instead of the actual vcpu used : rr = instance_vcpus {rr}")
+
+            #time reserved for use by the software ; e.g : if the software is running for whole 5 minutes, then tr = 5
+            tr = resource_observations.get("tr", None)
             
             # Calculate the E-CPU, E-Mem, and E-GPU metrics
-            ecpu = self.calculate_ecpu(cpu_util, timespan=timespan, tdp=tdp, core_count=rr)
+            ecpu = self.calculate_ecpu(cpu_util, timespan=timespan, tdp=tdp, core_count=rr, cpu_core_hours=tr)
             emem = self.calculate_emem(mem_util) #memory model uses only the average memory utilization in GB (calculated for the given timespan))
             egpu = self.calculate_egpu(gpu_util, timespan=timespan, tdp=tdp, gpu_count=rr)
 
@@ -184,7 +193,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
             total_vcpus = static_params.get(resource_name, {}).get("total_vcpus", 16) or 16
             te = static_params.get(resource_name, {}).get("te", 1200) or 1200
 
-            m = self.calculate_m(timespan=timespan, rr=rr, total_vcpus=total_vcpus, te=te)
+            m = self.calculate_m(timespan=timespan, rr=rr, total_vcpus=total_vcpus, te=te, tr=tr)
 
             # Create a dictionary with the metric names and values for this resource
             impact_metrics = {

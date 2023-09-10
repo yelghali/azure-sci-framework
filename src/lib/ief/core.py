@@ -271,44 +271,40 @@ class AttributedImpactNodeInterface(ABC):
     def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity : float = 100, host_static_params : dict = {}, self_static_parms : dict = {}, host_node_model : ImpactNodeInterface = None) -> Dict[str, SCIImpactMetricsInterface]:
         #return a SCIImpactMetricsInterface object, 
         
+        # Carbon Intensity
+        I = carbon_intensity
+        
 
         print("host_impact observations : %s" % host_impact.observations)
         print("self observations %s" % observations)
 
-        node_host_cpu_util_ratio = observations.get("average_cpu_percentage", 0) / host_impact.observations.get("average_cpu_percentage", 1) if host_impact.observations.get("average_cpu_percentage", 1) != 0 else 0
-        node_host_memory_util_ratio = observations.get("average_memory_gb", 0) / host_impact.observations.get("average_memory_gb", 1) if host_impact.observations.get("average_memory_gb", 1) != 0 else 0
-        node_host_gpu_util_ratio = 0 #TODO : add gpu util ratio
+        cpu_util = observations.get("average_cpu_percentage", 0)
+        memory_gb = observations.get("memory_gb", 0) 
 
-        #add to self observations dict
-        observations["node_host_cpu_util_ratio"] = node_host_cpu_util_ratio
-        observations["node_host_memory_util_ratio"] = node_host_memory_util_ratio
-        observations["node_host_gpu_util_ratio"] = node_host_gpu_util_ratio
 
-        # Energy
-        E_CPU = host_impact.E_CPU * node_host_cpu_util_ratio
-        E_MEM = host_impact.E_MEM * node_host_memory_util_ratio
-        E_GPU = host_impact.E_GPU * node_host_gpu_util_ratio
-        E = E_CPU + E_MEM + E_GPU
+        #prep self (resource) and host node (host) static params & observations
 
-        # Carbon Intensity
-        I = carbon_intensity
-        
-        
-        # Embodied Emisions (M)
-        #prep pod_node_static_params, to call host_node_model.calculate_m
-        pod_node_static_params = {}
-        # te is node te
-        # rr / instance cpu is pod cpu limit (gb)
-        # total_vc is node instance cpu (rr of node)
-        te = host_static_params.get("te", 0)
-        print("te : %s" % te)
-        #rr = self_static_parms.get("cpu_limit", 1)
+        # te is host node te
+        # tdp is host node tdp
+        te = host_static_params.get("te", 1200)
+        total_vc = host_static_params.get("total_vcpus", 4)
+        tdp = host_static_params.get("vm_sku_tdp", 200)
+
+        #how many cpu cores are allocated to the self resource (rr resources reserved), and for how long (tr time reserved)
         rr = observations.get("rr", 1)
         tr = observations.get("tr", 1)
-        print("rr : %s" % rr)
-        
-        total_vc = host_static_params.get("total_vcpus", 4)
+
+        #add tdp to self static params
+        self_static_parms["host_sku_tdp"] = tdp
         print("total_vc : %s" % total_vc)
+
+       # Energy
+        E_CPU = host_node_model.calculate_ecpu(cpu_util, timespan=self.timespan, tdp=tdp, core_count=rr, cpu_core_hours=tr)
+        E_MEM = host_node_model.calculate_emem(memory_gb)
+        E_GPU = 0 # TODO
+        E = E_CPU + E_MEM + E_GPU
+
+        # Embodied Emisions (M)
         M = host_node_model.calculate_m(te=te, rr=rr, total_vcpus=total_vc, timespan=self.timespan, tr = tr)
         print("pod M : %s" % M)
         MHost = host_impact.M #TODO : change this to be calculated from the host node

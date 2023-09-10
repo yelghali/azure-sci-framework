@@ -225,7 +225,7 @@ class KubernetesNode(ImpactNodeInterface):
             for node_name, item in data.items():
                 if node_name in self.resources.keys():
                     cpu_util = float(item["cpuCoreUsageAverage"]) 
-                    avg_memory_gb = float(item["ramByteUsageAverage"] / (1024 ** 3))
+                    memory_gb = float(item["ramBytes"] / (1024 ** 3))
 
                     observations[node_name] = {
                     #     "average_cpu_percentage": cpu_util, 
@@ -236,7 +236,7 @@ class KubernetesNode(ImpactNodeInterface):
                                 "tr" : float(item["cpuCoreHours"]),
                                 "cpuCores" : float(item["cpuCores"]),
                                 "rr" : float(item["cpuCores"]),
-                                "average_memory_gb": avg_memory_gb,
+                                "memory_gb": memory_gb,
                                 "ramByteHours" : float(item["ramByteHours"]),
                                 "ramBytes" : float(item["ramBytes"]),
                                 "average_gpu_percentage" : 0, #gpu_utilization TODO

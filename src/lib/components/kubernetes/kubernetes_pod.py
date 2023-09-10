@@ -273,7 +273,7 @@ class KubernetesPod(KubernetesNode):
                     for selected_pod_name in selected_pod_names:
                         if selected_pod_name in api_results_pod_name: # if is a substring
                             cpu_util = float(item["cpuCoreUsageAverage"]) 
-                            avg_memory_gb = float(item["ramByteUsageAverage"] / (1024 ** 3))
+                            memory_gb = float(item["ramBytes"] / (1024 ** 3))
 
                             observations[selected_pod_name] = {
                                 "average_cpu_percentage": cpu_util, 
@@ -281,7 +281,7 @@ class KubernetesPod(KubernetesNode):
                                 "tr" : float(item["cpuCoreHours"]),
                                 "cpuCores" : float(item["cpuCores"]),
                                 "rr" : float(item["cpuCores"]),
-                                "average_memory_gb": avg_memory_gb,
+                                "memory_gb": memory_gb,
                                 "ramByteHours" : float(item["ramByteHours"]),
                                 "ramBytes" : float(item["ramBytes"]),
                                 "average_gpu_percentage" : 0, #gpu_utilization TODO
@@ -379,6 +379,9 @@ class KubernetesPod(KubernetesNode):
             for pod in pod_list:
                 node_name = pod['node_name']
                 pod_name = pod['name']
+                if pod_name not in pod_observations.keys() or pod_name not in pod_static_params.keys() :
+                    Warning(f"Pod {pod_name} not found in observations or static params ; skipping")
+                    continue
                 pod_impact_object = AttributedImpactNodeInterface(name = pod_name,
                                                                     host_node_impact_dict= node_impact_metrics[node_name],
                                                                     carbon_intensity_provider=self.carbon_intensity_provider,
@@ -396,6 +399,12 @@ class KubernetesPod(KubernetesNode):
 
             for i, pod in enumerate(pod_list):
                 pod_name = pod['name']
-                pods_impact[pod_name] = pod_results[i][pod_name] or {}
+                if pod_name not in pod_observations.keys() or pod_name not in pod_static_params.keys() :
+                    continue
+                try:
+                    pods_impact[pod_name] = pod_results[i][pod_name] or {}
+                except Exception as e:
+                    print(f"Error calculating pod impact for pod {pod_name} : {e} ; skipping")
+                    continue
 
             return pods_impact

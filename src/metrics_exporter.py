@@ -26,7 +26,7 @@ metadata = {
 
 
 timespan = os.environ.get("TIMESPAN", "PT5M")
-interval = os.environ.get("INTERVAL", "PT5M")
+interval = os.environ.get("INTERVAL", "PT1M")
 
 KUBELOGIN_AUTH_METHOD = os.environ.get("KUBELOGIN_AUTH_METHOD", "spn")
 os.environ["AAD_LOGIN_METHOD"] = KUBELOGIN_AUTH_METHOD
