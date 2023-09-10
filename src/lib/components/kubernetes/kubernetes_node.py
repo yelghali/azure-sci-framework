@@ -39,11 +39,11 @@ class KubernetesNode(ImpactNodeInterface):
         self.prometheus_url = params.get("prometheus_server_endpoint", None)
         self.credential = DefaultAzureCredential()
 
-        self.validate_configuration()
+    #     self.validate_configuration()
 
-    def validate_configuration(self):
-        if not self.prometheus_url:
-            raise Exception("Prometheus server endpoint not provided, in params {}")
+    # def validate_configuration(self):
+    #     if not self.prometheus_url:
+    #         raise Exception("Prometheus server endpoint not provided, in params {}")
     
     def list_supported_skus(self):
         return []
@@ -228,9 +228,20 @@ class KubernetesNode(ImpactNodeInterface):
                     avg_memory_gb = float(item["ramByteUsageAverage"] / (1024 ** 3))
 
                     observations[node_name] = {
-                        "average_cpu_percentage": cpu_util, 
-                      "average_memory_gb": avg_memory_gb,
-                        "average_gpu_percentage" : 0 #TODO: add gpu
+                    #     "average_cpu_percentage": cpu_util, 
+                    #   "average_memory_gb": avg_memory_gb,
+                    #     "average_gpu_percentage" : 0 #TODO: add gpu
+                                "average_cpu_percentage": cpu_util, 
+                                "cpuCoreHours" : float(item["cpuCoreHours"]),
+                                "tr" : float(item["cpuCoreHours"]),
+                                "cpuCores" : float(item["cpuCores"]),
+                                "rr" : float(item["cpuCores"]),
+                                "average_memory_gb": avg_memory_gb,
+                                "ramByteHours" : float(item["ramByteHours"]),
+                                "ramBytes" : float(item["ramBytes"]),
+                                "average_gpu_percentage" : 0, #gpu_utilization TODO
+                                "gpuCount" : float(item["gpuCount"]),
+                                "gpuHours" : float(item["gpuHours"])
                       }
             self.observations = observations
             return observations
@@ -361,14 +372,14 @@ class KubernetesNode(ImpactNodeInterface):
         for resource_name, resource in self.resources.items():
             vm_name = resource.metadata.name
             vm_sku_tdp = results[i]
-            rr, total_vcpus, instance_memory = results[i+1]
+            instance_vcpus, platform_total_vcpus, instance_memory = results[i+1]
             te = results[i+2]
 
             self.static_params[vm_name] = {
                 'vm_sku': resource.metadata.labels.get("beta.kubernetes.io/instance-type", ""),
                 'vm_sku_tdp': vm_sku_tdp,
-                'rr': rr,
-                'total_vcpus': total_vcpus,
+                'instance_vcpus': instance_vcpus,
+                'total_vcpus': platform_total_vcpus,
                 'te': te,
                 'instance_memory': instance_memory
             }

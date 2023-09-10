@@ -11,6 +11,7 @@ from lib.components.azure_vm import AzureVM
 from lib.components.azure_aks_node import AKSNode
 from lib.components.azure_aks_pod import AKSPod
 from lib.components.kubernetes.kubernetes_node import KubernetesNode
+from lib.components.kubernetes.kubernetes_pod import KubernetesPod
 from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.MetricsExporter.exporter import MetricsExporter
@@ -168,6 +169,16 @@ if __name__ == '__main__':
              timespan=timespan,
              interval=interval,
              params=params)
+         ,
+        KubernetesPod(name = "myakspod",
+                model = ComputeServer_STATIC_IMP(),
+                carbon_intensity_provider=carbonIntensityProvider,
+                auth_object=auth_params,
+                resource_selectors=pod_resource_selectors,
+                metadata=metadata,
+                timespan=timespan,
+                interval=interval,
+                params=params)
     ]
     
     # 2. Run the main function

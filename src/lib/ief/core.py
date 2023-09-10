@@ -271,10 +271,23 @@ class AttributedImpactNodeInterface(ABC):
     def attribute_impact_from_host_node(self, host_impact = SCIImpactMetricsInterface, observations = Dict[str, object], carbon_intensity : float = 100, host_static_params : dict = {}, self_static_parms : dict = {}, host_node_model : ImpactNodeInterface = None) -> Dict[str, SCIImpactMetricsInterface]:
         #return a SCIImpactMetricsInterface object, 
         
+
+        print("host_impact observations : %s" % host_impact.observations)
+        print("self observations %s" % observations)
+
+        node_host_cpu_util_ratio = observations.get("average_cpu_percentage", 0) / host_impact.observations.get("average_cpu_percentage", 1) if host_impact.observations.get("average_cpu_percentage", 1) != 0 else 0
+        node_host_memory_util_ratio = observations.get("average_memory_gb", 0) / host_impact.observations.get("average_memory_gb", 1) if host_impact.observations.get("average_memory_gb", 1) != 0 else 0
+        node_host_gpu_util_ratio = 0 #TODO : add gpu util ratio
+
+        #add to self observations dict
+        observations["node_host_cpu_util_ratio"] = node_host_cpu_util_ratio
+        observations["node_host_memory_util_ratio"] = node_host_memory_util_ratio
+        observations["node_host_gpu_util_ratio"] = node_host_gpu_util_ratio
+
         # Energy
-        E_CPU = host_impact.E_CPU * observations.get("node_host_cpu_util_percent", 0) / 100
-        E_MEM = host_impact.E_MEM * observations.get("node_host_memory_util_percent", 0) / 100
-        E_GPU = host_impact.E_GPU * observations.get("node_host_gpu_util_percent", 0) / 100
+        E_CPU = host_impact.E_CPU * node_host_cpu_util_ratio
+        E_MEM = host_impact.E_MEM * node_host_memory_util_ratio
+        E_GPU = host_impact.E_GPU * node_host_gpu_util_ratio
         E = E_CPU + E_MEM + E_GPU
 
         # Carbon Intensity
@@ -289,11 +302,14 @@ class AttributedImpactNodeInterface(ABC):
         # total_vc is node instance cpu (rr of node)
         te = host_static_params.get("te", 0)
         print("te : %s" % te)
-        rr = self_static_parms.get("cpu_limit", 0)
+        #rr = self_static_parms.get("cpu_limit", 1)
+        rr = observations.get("rr", 1)
+        tr = observations.get("tr", 1)
         print("rr : %s" % rr)
-        total_vc = host_static_params.get("total_vcpus", 0)
+        
+        total_vc = host_static_params.get("total_vcpus", 4)
         print("total_vc : %s" % total_vc)
-        M = host_node_model.calculate_m(te=te, rr=rr, total_vcpus=total_vc, timespan=self.timespan)
+        M = host_node_model.calculate_m(te=te, rr=rr, total_vcpus=total_vc, timespan=self.timespan, tr = tr)
         print("pod M : %s" % M)
         MHost = host_impact.M #TODO : change this to be calculated from the host node
         print("host M : %s" % MHost)
@@ -322,7 +338,7 @@ class AttributedImpactNodeInterface(ABC):
 
         metadata = {'attributed': "True", "host_node_name": host_node_name}
         components = []
-        static_params = {}
+        static_params = self_static_parms
 
 
         toto = {}
@@ -338,10 +354,10 @@ class AttributedImpactNodeInterface(ABC):
 
     async def calculate(self, carbon_intensity: CarbonIntensityPluginInterface  = None) -> Dict[str, SCIImpactMetricsInterface]:
         if self.host_node_impact_dict is None:
-            raise ValueError('Host node is not set')
+            raise ValueError('Host node impact value is not set')
         
         if self.observations is None:
-            raise ValueError('Observations are not set')
+            raise ValueError('self Observations are not set')
         
         #await self.host_node.fetch_resources()
 
@@ -356,8 +372,12 @@ class AttributedImpactNodeInterface(ABC):
         self_static_parms = self.static_params
         host_node_model = self.host_node_model
 
-        CI = await self.carbon_intensity_provider.get_current_carbon_intensity()
-        carbon_intensity = CI["value"]
+        if self.carbon_intensity_provider is None:
+            Warning('Carbon Intensity Provider is not set, using default value of 100')
+            carbon_intensity = 100
+        else:
+            CI = await self.carbon_intensity_provider.get_current_carbon_intensity()
+            carbon_intensity = CI["value"]
 
         node_metric = self.attribute_impact_from_host_node(host_impact, self.observations, carbon_intensity=carbon_intensity, host_static_params=host_static_params, self_static_parms=self_static_parms, host_node_model=host_node_model)
         return node_metric

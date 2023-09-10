@@ -12,6 +12,7 @@ from lib.components.azure_vm import AzureVM
 from lib.components.azure_aks_node import AKSNode
 from lib.components.azure_aks_pod import AKSPod
 from lib.components.kubernetes.kubernetes_node import KubernetesNode
+from lib.components.kubernetes.kubernetes_pod import KubernetesPod
 
 from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
@@ -29,11 +30,11 @@ vm_resource_selectors = {
 
 pod_resource_selectors = {
     "subscription_id": "0f4bda7e-1203-4f11-9a85-22653e9af4b4",
-     "resource_group": "sus-aks-lab",
-     "cluster_name": "sus-aks-lab",
+    "resource_group": "aks",
+    "cluster_name": "aks-costdemo",
      #"labels" : {"name" : "keda-operator"},
      #"namespace" : "carbon-aware-keda-operator-system",
-     #"namespace" : "keda",
+     "namespace" : "default",
      "prometheus_endpoint": "https://defaultazuremonitorworkspace-neu-b44y.northeurope.prometheus.monitor.azure.com"
  }
 
@@ -139,10 +140,21 @@ async def main1():
              interval=interval,
              params=params)
 
+    pod = KubernetesPod(name = "myakspod", 
+                        model = ComputeServer_STATIC_IMP(),  
+                        carbon_intensity_provider=None, 
+                        auth_object=auth_params, 
+                        resource_selectors=pod_resource_selectors, 
+                        metadata=metadata,
+                        timespan=timespan,
+                        interval=interval,
+                        params=params)
+
 
     while(True):
-        toto = await k8snode.calculate()
+        #toto = await k8snode.calculate()
         #toto = await k8snode.fetch_observations()
+        toto = await pod.calculate()
         print(toto)
         time.sleep(300)
 
@@ -168,11 +180,10 @@ async def main1():
     #print(uuu)
 
 
-    # pod = AKSPod(name = "myakspod", model = ComputeServer_STATIC_IMP(),  carbon_intensity_provider=carbonIntensityProvider, auth_object=auth_params, resource_selectors=pod_resource_selectors, metadata=metadata)
 
-    # #toto = await pod.fetch_resources()
-    # toto = await pod.lookup_static_params()
-    # #print(toto)
+    #toto = await pod.fetch_resources()
+    toto = await pod.lookup_static_params()
+    #print(toto)
     # #await pod.fetch_observations()
     # ttoto = await pod.calculate()
     # #print(ttoto)

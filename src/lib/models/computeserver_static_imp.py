@@ -101,27 +101,32 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
         energy_consumption = gpu_count * (power_consumption * duartion_in_hours / 1000) # W * H / 1000 = KWH
         return energy_consumption
 
-    def calculate_m(self, timespan='PT1H', rr = 2, total_vcpus = 20, te = 1200 ) -> float:
+    def calculate_m(self, timespan='PT1H', rr = 2, total_vcpus = 20, te = 1200, tr = None ) -> float:
         # TE: Embodied carbon estimates for the servers from the Cloud Carbon Footprint Coefficient Data Set
         te = te  # kgCO2e
         te_g = te * 1000  # gCO2e
 
-        # TR: Time reserved for the hardware
-        tr = 1  # 1 hour, default value
-        
-        # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
-        duration = parse_duration(timespan)
-        duration_in_minutes = float(duration.time.minutes)
-        duration_in_hours = duration_in_minutes / 60.0
 
-        if hasattr(duration.time, 'hours'):
-            duration_in_hours += float(duration.time.hours)
+        # TR: Time reserved for use by the software
+        if tr is None: #we assume software was always running for the given timespan
+            warnings.warn(f"TR is not set. we assume software was always running for the given timespan : {timespan}")
+            tr = 1  # 1 hour, default value
+            
+            # we convert to minutes first, to avoid gettting 0 hours for small durations as 5 minutes using direct hours conversion.
+            duration = parse_duration(timespan)
+            duration_in_minutes = float(duration.time.minutes)
+            duration_in_hours = duration_in_minutes / 60.0
 
-        if hasattr(duration.time, 'days'):
-            duration_in_hours += float(duration.time.days) * 24.0
+            if hasattr(duration.time, 'hours'):
+                duration_in_hours += float(duration.time.hours)
+
+            if hasattr(duration.time, 'days'):
+                duration_in_hours += float(duration.time.days) * 24.0
 
 
-        if duration_in_hours : tr = duration_in_hours
+            if duration_in_hours : tr = duration_in_hours
+        else :
+            tr = tr
 
         # EL: Expected lifespan of the equipment
         el = 35040  # hours (4 years)
