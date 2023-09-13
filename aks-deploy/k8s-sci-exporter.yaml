@@ -159,6 +159,10 @@ spec:
           value : CarbonIntensityKubernetesConfigMap
         - name: AZURE_TENANT_ID
           value: 16b3c013-d300-468d-ac64-7eda0820b6d3
+        - name: TIMESPAN
+          value : "PT1M"
+        - name : INTERVAL
+          value : "PT1M"
 
 
 

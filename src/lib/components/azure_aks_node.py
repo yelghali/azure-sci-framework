@@ -3,6 +3,8 @@ from typing import Dict, Any
 from lib.components.azure_vm import AzureVM
 from lib.ief.core import SCIImpactMetricsInterface
 from lib.auth.azure import AzureManagedIdentityAuthParams
+from lib.MetricsExporter.exporter import *
+
 
 from kubernetes import client, config
 from kubernetes.config.kube_config import KubeConfigLoader
@@ -34,6 +36,7 @@ class AKSNode(AzureVM):
         self.observations = {}
         self.credential = DefaultAzureCredential()
         self.static_params = {}
+        self.exporter = AKSNodeExporter()
         # Create an instance of AzureManagedIdentityAuthParams to authenticate with Azure using managed identity
 
     def get_auth_token(self):

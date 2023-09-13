@@ -9,7 +9,7 @@ from lib.components.azure_vm import AzureVM
 from lib.ief.core import ImpactNodeInterface, SCIImpactMetricsInterface
 
 
-class MetricsExporter:
+class MetricsExporter2:
     # Define the Gauge instances in the __init__ method
     e_cpu_gauge = Gauge("E_CPU", "Energy consumed by CPU", ["name", "model_name", "type"])
     e_mem_gauge = Gauge("E_MEM", "Energy consumed by memory", ["name", "model_name", "type"])
@@ -52,3 +52,62 @@ class MetricsExporter:
             self.i_gauge.labels(name=value.name, model_name=value.model, type=value.type).set(value.I)
             self.m_gauge.labels(name=value.name, model_name=value.model, type=value.type).set(value.M)
             self.sci_gauge.labels(name=value.name, model_name=value.model, type=value.type).set(value.SCI)
+
+
+class MetricsExporter:
+    def __init__(self, data: Dict[str, SCIImpactMetricsInterface] = {}, labels: List[str] = [], prefix: str = ""):
+        self.data = data
+        self.labels = labels
+        self.prefix = prefix
+        self.e_cpu_gauge = Gauge(f"{prefix}_E_CPU", "Energy consumed by CPU", self.labels)
+        self.e_mem_gauge = Gauge(f"{prefix}_E_MEM", "Energy consumed by memory", self.labels)
+        self.e_gpu_gauge = Gauge(f"{prefix}_E_GPU", "Energy consumed by GPU", self.labels)
+        self.e_gauge = Gauge(f"{prefix}_E", "Total energy consumed", self.labels)
+        self.i_gauge = Gauge(f"{prefix}_I", "Carbon intensity", self.labels)
+        self.m_gauge = Gauge(f"{prefix}_M", "Fixed metric value", self.labels)
+        self.sci_gauge = Gauge(f"{prefix}_SCI", "SCI metric", self.labels)
+
+    def set_data(self, data = {}):
+        self.data = data
+
+    def to_csv(self, file_path):
+        with open(file_path, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(self.labels + ["E_CPU", "E_MEM", "E_GPU", "E", "I", "M", "SCI"])
+            for key, value in self.data.items():
+                writer.writerow([getattr(value, label) for label in self.labels] + [value.E_CPU, value.E_MEM, value.E_GPU, value.E, value.I, value.M, value.SCI])
+
+    def to_json(self, file_path):
+        with open(file_path, 'w') as f:
+            json.dump(self.data, f, default=lambda x: x.__dict__)
+
+    @staticmethod
+    def start_http_server(port):
+        start_http_server(port)
+
+    def to_prometheus(self):
+        for key, value in self.data.items():
+            # Set the value of each Gauge to the corresponding value in the data dictionary
+            self.e_cpu_gauge.labels(**self._get_labels(value)).set(value.E_CPU)
+            self.e_mem_gauge.labels(**self._get_labels(value)).set(value.E_MEM)
+            self.e_gpu_gauge.labels(**self._get_labels(value)).set(value.E_GPU)
+            self.e_gauge.labels(**self._get_labels(value)).set(value.E)
+            self.i_gauge.labels(**self._get_labels(value)).set(value.I)
+            self.m_gauge.labels(**self._get_labels(value)).set(value.M)
+            self.sci_gauge.labels(**self._get_labels(value)).set(value.SCI)
+
+    def _get_labels(self, value):
+        return {label: getattr(value, label) for label in self.labels}
+
+
+class AzureVMExporter(MetricsExporter):
+    def __init__(self, data: Dict[str, SCIImpactMetricsInterface]):
+        super().__init__(data, ["name", "model", "type", "vm_size", "os_type"], "azure_vm")
+
+class AKSNodeExporter(MetricsExporter):
+    def __init__(self, data: Dict[str, SCIImpactMetricsInterface]):
+        super().__init__(data, ["name", "model", "type"], "aks_node")
+
+class AKSPodExporter(MetricsExporter):
+    def __init__(self, data: Dict[str, SCIImpactMetricsInterface]):
+        super().__init__(data, ["name", "model", "type"], "aks_pod")

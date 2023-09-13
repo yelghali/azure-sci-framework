@@ -16,7 +16,7 @@ from lib.components.kubernetes.kubernetes_pod import KubernetesPod
 
 from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
-from lib.MetricsExporter.exporter import MetricsExporter
+from lib.MetricsExporter.exporter import *
 from lib.carbonIntensity.kubernetesConfigMapReader import CarbonIntensityKubernetesConfigMap
 
 auth_params = {

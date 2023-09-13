@@ -5,6 +5,7 @@ from lib.components.azure_aks_node import AKSNode
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
 from lib.ief.core import *
 from lib.auth.azure import AzureManagedIdentityAuthParams
+from lib.MetricsExporter.exporter import *
 
 from kubernetes import client, config
 from kubernetes.config.kube_config import KubeConfigLoader

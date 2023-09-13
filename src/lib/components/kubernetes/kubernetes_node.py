@@ -1,6 +1,8 @@
 import requests
 from typing import Dict, Any, Tuple
 from lib.ief.core import *
+from lib.MetricsExporter.exporter import *
+
 
 from kubernetes import client, config
 from kubernetes.config.kube_config import KubeConfigLoader
@@ -28,6 +30,9 @@ OPENCOST_API_URL = os.environ.get("OPENCOST_API_URL", "http://localhost:9003").r
 
 
 class KubernetesNode(ImpactNodeInterface):
+
+    exporter = AKSNodeExporter({})
+    
     def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H", params={}):
         super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan, params)
         self.type = "kubernetes.node"
@@ -38,6 +43,7 @@ class KubernetesNode(ImpactNodeInterface):
         self.properties = {}
         self.prometheus_url = params.get("prometheus_server_endpoint", None)
         self.credential = DefaultAzureCredential()
+
 
     #     self.validate_configuration()
 
@@ -300,11 +306,11 @@ class KubernetesNode(ImpactNodeInterface):
 
     async def calculate(self, carbon_intensity: float = 100) -> Dict[str, SCIImpactMetricsInterface]:
         # if self.resources == {}: call fetch_resources
-        if self.resources == {} or self.resources == None:
-            await self.fetch_resources()
-        # if self.static_params == {}: call lookup_static_params
-        if self.static_params == {} or self.static_params == None:
-            await self.lookup_static_params()
+        #if self.resources == {} or self.resources == None:
+        await self.fetch_resources()
+        ## if self.static_params == {}: call lookup_static_params
+        #if self.static_params == {} or self.static_params == None:
+        await self.lookup_static_params()
 
         #always get updated observations
         await self.fetch_observations()

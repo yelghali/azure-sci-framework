@@ -14,7 +14,7 @@ from lib.components.kubernetes.kubernetes_node import KubernetesNode
 from lib.components.kubernetes.kubernetes_pod import KubernetesPod
 from lib.ief.core import *
 from lib.models.computeserver_static_imp import ComputeServer_STATIC_IMP
-from lib.MetricsExporter.exporter import MetricsExporter
+from lib.MetricsExporter.exporter import *
 from lib.carbonIntensity.kubernetesConfigMapReader import CarbonIntensityKubernetesConfigMap
 
 auth_params = {
@@ -86,9 +86,10 @@ async def process_impact_node(impact_node: ImpactNodeInterface, stop_event: asyn
         print(impact_metrics)
 
         # export the metrics to prometheus
-        exporter = MetricsExporter(impact_metrics)
-        exporter.to_prometheus()
-        await asyncio.sleep(300) # wait for 5 minutes before exporting the metrics again
+        #exporter = MetricsExporter(impact_metrics)
+        impact_node.exporter.set_data(impact_metrics)
+        impact_node.exporter.to_prometheus()
+        await asyncio.sleep(60) # wait for 1 minutes before exporting the metrics again
 
 
 async def main(impact_nodes: List[ImpactNodeInterface]):
@@ -160,6 +161,7 @@ if __name__ == '__main__':
     #             interval=interval)
     #     ]
     
+
     impact_nodes = [
             KubernetesNode(name = "my-aks-cluster", model = ComputeServer_STATIC_IMP(),  
              carbon_intensity_provider=carbonIntensityProvider, 
