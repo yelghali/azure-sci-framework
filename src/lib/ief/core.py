@@ -25,13 +25,13 @@ class SCIImpactMetricsInterface(BaseModel):
     M: float
     SCI: float
 
-    metadata: Dict[str, str] = {}
+    metadata: Dict[str, object] = {}
     observations: Dict[str, object] = {}
     static_params: Dict[str, object] = {}
     components: List[Dict[str,'SCIImpactMetricsInterface']] = []
     host_node : Dict[str, 'SCIImpactMetricsInterface'] = {}
 
-    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, str] = None, static_params : Dict[str, object] = None ,observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = [], host_node : dict[str, 'SCIImpactMetricsInterface'] = {}):
+    def __init__(self, metrics: Dict[str, float], metadata: Dict[str, object] = {}, static_params : Dict[str, object] = None ,observations: Dict[str, object] = None, components_list: List['SCIImpactMetricsInterface'] = [], host_node : dict[str, 'SCIImpactMetricsInterface'] = {}):
         
 
         
@@ -332,7 +332,7 @@ class AttributedImpactNodeInterface(ABC):
         host_node_name = list(self.host_node_impact_dict.keys())[0]
 
 
-        metadata = {'attributed': "True", "host_node_name": host_node_name}
+        metadata = self.metadata
         components = []
         static_params = self_static_parms
 

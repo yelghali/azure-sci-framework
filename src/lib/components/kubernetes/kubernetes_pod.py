@@ -32,7 +32,7 @@ OPENCOST_API_URL = os.environ.get("OPENCOST_API_URL", "http://localhost:9003").r
 class KubernetesPod(KubernetesNode):
         
         exporter = AKSPodExporter({})
-        
+
         def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H", params={}):
             super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan, params)
             self.type = "kubernetes.pod"
@@ -273,6 +273,7 @@ class KubernetesPod(KubernetesNode):
             if response.status_code == 200:
                 data = response.json()["data"][0]
                 observations = {}
+                metadata = {}
                 for api_results_pod_name, item in data.items():
                     for selected_pod_name in selected_pod_names:
                         if selected_pod_name in api_results_pod_name: # if is a substring
@@ -294,7 +295,11 @@ class KubernetesPod(KubernetesNode):
                                 "gpuCount" : float(item["gpuCount"]),
                                 "gpuHours" : float(item["gpuHours"])
                             }
+
+                            metadata[selected_pod_name] = item["properties"]
                 self.observations = observations
+
+                self.metadata = metadata
                 return observations
             else:
                 raise Exception(f"Error fetching observations from {url}: {response.status_code} {response.text}")
@@ -391,7 +396,7 @@ class KubernetesPod(KubernetesNode):
                 pod_impact_object = AttributedImpactNodeInterface(name = pod_name,
                                                                     host_node_impact_dict= node_impact_metrics[node_name],
                                                                     carbon_intensity_provider=self.carbon_intensity_provider,
-                                                                    metadata=self.metadata,
+                                                                    metadata=self.metadata[pod_name],
                                                                     observations=pod_observations[pod_name],
                                                                     timespan=self.timespan,
                                                                     interval=self.interval,

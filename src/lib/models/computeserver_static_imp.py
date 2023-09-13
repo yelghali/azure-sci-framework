@@ -163,7 +163,7 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
 
         return m
 
-    async def calculate(self, observations, carbon_intensity: CarbonIntensityPluginInterface= None, timespan : str = "PT1H", interval = 'PT5M', metadata : dict [str, str] = {}, static_params : dict[str, str]= {} ) -> dict[str, SCIImpactMetricsInterface]:
+    async def calculate(self, observations, carbon_intensity: CarbonIntensityPluginInterface= None, timespan : str = "PT1H", interval = 'PT5M', metadata : dict [str, object] = {}, static_params : dict[str, object]= {} ) -> dict[str, SCIImpactMetricsInterface]:
         # Create an empty dictionary to store the metrics for each resource
         resource_metrics = {}
 
@@ -222,7 +222,9 @@ class ComputeServer_STATIC_IMP(ImpactModelPluginInterface):
                 'M': float(m),
                 'SCI': float(((ecpu + emem + egpu) * i) + m)
             }
-            metric_obj = SCIImpactMetricsInterface(metrics=impact_metrics, metadata={"resource_name": resource_name}, observations=resource_observations, components_list=[], static_params=static_params.get(resource_name, {}))
+
+            resource_metadata = metadata.get(resource_name, {}) 
+            metric_obj = SCIImpactMetricsInterface(metrics=impact_metrics, metadata=resource_metadata, observations=resource_observations, components_list=[], static_params=static_params.get(resource_name, {}))
             print(metric_obj)
             resource_metrics[resource_name] = metric_obj
 

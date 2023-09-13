@@ -32,7 +32,7 @@ OPENCOST_API_URL = os.environ.get("OPENCOST_API_URL", "http://localhost:9003").r
 class KubernetesNode(ImpactNodeInterface):
 
     exporter = AKSNodeExporter({})
-    
+
     def __init__(self, name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval="PT5M", timespan="PT1H", params={}):
         super().__init__(name, model, carbon_intensity_provider, auth_object, resource_selectors, metadata, interval, timespan, params)
         self.type = "kubernetes.node"
@@ -40,6 +40,7 @@ class KubernetesNode(ImpactNodeInterface):
         self.observations = {}
         self.credential = None
         self.static_params = {}
+        self.metadata = metadata
         self.properties = {}
         self.prometheus_url = params.get("prometheus_server_endpoint", None)
         self.credential = DefaultAzureCredential()
@@ -228,6 +229,7 @@ class KubernetesNode(ImpactNodeInterface):
         if response.status_code == 200:
             data = response.json()["data"][0]
             observations = {}
+            metadata = {}
             for node_name, item in data.items():
                 if node_name in self.resources.keys():
                     cpu_util = float(item["cpuCoreUsageAverage"]) * 100 #convert to percentage
@@ -259,7 +261,10 @@ class KubernetesNode(ImpactNodeInterface):
                                 "gpuCount" : float(item["gpuCount"]),
                                 "gpuHours" : float(item["gpuHours"])
                       }
+                    metadata[node_name] = item["properties"]  
+
             self.observations = observations
+            self.metadata = metadata
             return observations
         else:
             raise Exception(f"Error fetching observations from {url}: {response.status_code} {response.text}")
