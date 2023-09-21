@@ -2,7 +2,7 @@
 * AS a developer, I want to estimate the carbon impact of my application (which uses several infrastructure components)
 * As a developer / admin, I want to be able to see the carbon impact of my application over time (in dashboards)
 
-# This project is a POC for an Azure ScI Metrics framework (as in Software carbon intensity) based on the spec from the https://github.com/Green-Software-Foundation/ief/
+# This project is a POC for an Azure SCI Metrics framework (as in Software carbon intensity) based on the spec from the https://github.com/Green-Software-Foundation/ief/
 
 This project is an implementation of the Impact engine Framework, that provides : 
 * An API : to calculate carbon metrics of an application (ad-hoc)
