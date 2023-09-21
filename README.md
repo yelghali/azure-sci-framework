@@ -2,14 +2,14 @@
 * AS a developer, I want to estimate the carbon impact of my application (which uses several infrastructure components)
 * As a developer / admin, I want to be able to see the carbon impact of my application over time (in dashboards)
 
-# This project is a POC of the ief framework in python (wip to converge with the final ief spec)
+# This project is a POC for an Azure ScI Metrics framework (as in Software carbon intensity) based on the spec from the https://github.com/Green-Software-Foundation/ief/
 
 This project is an implementation of the Impact engine Framework, that provides : 
 * An API : to calculate carbon metrics of an application (ad-hoc)
 * A metrics exporter : which allows to build impact dashboards to help reduce carbon impact
 * A python implementation of the framework 
 * An SCI model for compute server, based on the SCI study case : https://github.com/Green-Software-Foundation/sci-guide/blob/dev/use-case-submissions/dow-msft-Graph-DB.md
-
+* **Impotant** : the current implementation is a work in progress to converge with latest spec from the GSF IEF project.
 
 ## How it works
 
